@@ -1,0 +1,10 @@
+{:teachers-center-backend/server
+ {:port #or [#env PORT 3000]
+  :handler #ig/ref :teachers-center-backend/handler}
+
+ :teachers-center-backend/handler
+ {:openai-client #ig/ref :teachers-center-backend/openai-client}
+
+ :teachers-center-backend/openai-client
+ {:api-key #env OPENAI_API_KEY
+  :base-url "https://api.openai.com/v1"}}
