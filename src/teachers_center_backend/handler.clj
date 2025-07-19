@@ -9,7 +9,7 @@
 
 (defn health-handler [_]
   (response {:status "ok" 
-             :timestamp (java.time.Instant/now)
+             :timestamp (str (java.time.Instant/now))
              :service "teachers-center-backend"}))
 
 (defn generate-content-handler [openai-client]
@@ -41,13 +41,15 @@
   (route/not-found {:success false :error "Route not found"}))
 
 (defn create-handler [openai-client]
-  (-> app-routes
-      (wrap-json-body {:keywords? true})
-      wrap-json-response
-      (wrap-cors :access-control-allow-origin [#".*"]
-                 :access-control-allow-methods [:get :post :put :delete :options]
-                 :access-control-allow-headers ["Content-Type" "Authorization"])
-      (fn [handler]
-        (fn [request]
-          ;; Inject openai-client into request for handlers
-          (handler (assoc request :openai-client openai-client))))))
+  (let [inject-client (fn [handler]
+                        (fn [request]
+                          ;; Inject openai-client into request for handlers
+                          (handler (assoc request :openai-client openai-client))))]
+    (-> app-routes
+        inject-client
+        (wrap-json-body {:keywords? true})
+        wrap-json-response
+        (wrap-cors
+          :access-control-allow-origin [#".*"]
+          :access-control-allow-methods [:get :post :put :delete :options]
+          :access-control-allow-headers ["Content-Type" "Authorization"]))))
