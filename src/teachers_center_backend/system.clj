@@ -32,9 +32,13 @@
 
 (defmethod ig/init-key :teachers-center-backend/openai-client
   [_ {:keys [api-key base-url]}]
-  (let [actual-api-key (or (System/getenv "OPENAI_API_KEY") api-key)]
-    (println (str "Environment OPENAI_API_KEY: " (if (System/getenv "OPENAI_API_KEY") "found" "not found")))
+  (let [env-api-key (env :openai-api-key)
+        system-api-key (System/getenv "OPENAI_API_KEY")
+        actual-api-key (or env-api-key system-api-key api-key)]
+    (println (str "Environment OPENAI_API_KEY (environ): " (if env-api-key "found" "not found")))
+    (println (str "Environment OPENAI_API_KEY (System): " (if system-api-key "found" "not found")))
     (println (str "Config api-key: " (if api-key "found" "not found")))
+    (println (str "Using API key: " (if actual-api-key "found" "not found")))
     (when-not actual-api-key
       (throw (ex-info "OpenAI API key is required. Set OPENAI_API_KEY environment variable." 
                       {:env-var "OPENAI_API_KEY"})))
