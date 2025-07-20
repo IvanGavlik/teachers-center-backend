@@ -1,5 +1,5 @@
-# Use official Clojure image
-FROM clojure:openjdk-17-lein-alpine
+# Use official Clojure image with tools.deps
+FROM clojure:openjdk-17-tools-deps-alpine
 
 # Set working directory
 WORKDIR /app
@@ -10,10 +10,10 @@ COPY src/ src/
 COPY resources/ resources/
 
 # Download dependencies
-RUN clj -P
+RUN clojure -P
 
 # Expose port
 EXPOSE $PORT
 
 # Run the application
-CMD ["clj", "-M", "-m", "teachers-center-backend.core"]
+CMD ["clojure", "-M", "-m", "teachers-center-backend.core"]

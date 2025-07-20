@@ -7,8 +7,11 @@
 
 (defmethod ig/init-key :teachers-center-backend/server
   [_ {:keys [port handler]}]
-  (let [actual-port (or (env :port) port)]
-    (println (str "Environment PORT: " (env :port)))
+  (let [env-port (env :port)
+        actual-port (if env-port 
+                      (Integer/parseInt env-port)
+                      port)]
+    (println (str "Environment PORT: " env-port))
     (println (str "Config port: " port))
     (println (str "Starting server on port " actual-port))
     (jetty/run-jetty handler {:port actual-port :join? false})))
