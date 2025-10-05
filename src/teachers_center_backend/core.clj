@@ -4,6 +4,7 @@
             [teachers-center-backend.system])
   (:gen-class))
 
+; load-config 
 (defn load-config []
   (-> "config.edn"
       io/resource
