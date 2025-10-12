@@ -96,9 +96,14 @@ Clojure backend service for the AI Slides Assistant, providing content generatio
 ## Development
 
 ### Start REPL
+
+Start repl from terminal 
 ```bash
 clj -M:dev:repl
 ```
+
+Intelj specific: Then connect using remote
+
 
 ### Start System (in REPL)
 ```clojure

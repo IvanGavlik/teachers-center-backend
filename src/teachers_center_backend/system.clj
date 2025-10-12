@@ -3,7 +3,7 @@
             [ring.adapter.jetty :as jetty]
             [environ.core :refer [env]]
             [teachers-center-backend.handler :as handler]
-            [teachers-center-backend.openai :as openai]))
+            [teachers-center-backend.openapi.core :as openai]))
 
 (defmethod ig/init-key :teachers-center-backend/server
   [_ {:keys [port handler]}]

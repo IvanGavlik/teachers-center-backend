@@ -1,5 +1,5 @@
 (ns teachers-center-backend.content
-  (:require [teachers-center-backend.openai :as openai]
+  (:require [teachers-center-backend.openapi.core :as openai]
             [cheshire.core :as json]
             [clojure.string :as str]
             [clojure.tools.logging :as log]))
@@ -77,7 +77,9 @@ Requirements:
                     {:role "user" 
                      :content prompt}]
           
-          response (openai/chat-completion openai-client messages "gpt-4")
+          response (openai/chat-completion openai-client messages {:model "gpt-4"
+                                                                   :temperature 0.7
+                                                                   :max-tokens 2000})
           content-text (get-in response [:choices 0 :message :content])
           
           parsed-content (parse-vocabulary-response content-text)
