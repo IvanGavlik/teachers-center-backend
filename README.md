@@ -102,7 +102,8 @@ Start repl from terminal
 clj -M:dev:repl
 ```
 
-Intelj specific: Then connect using remote
+Intelj specific: Then connect using remote 
+    (somethimes does not work from first so try to connect one more time)
 
 
 ### Start System (in REPL)

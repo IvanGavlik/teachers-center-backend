@@ -14,8 +14,6 @@
         actual-port (if env-port 
                       (Integer/parseInt env-port)
                       port)]
-    (println (str "Environment PORT: " env-port))
-    (println (str "Config port: " port))
     (println (str "Starting server on port " actual-port))
     (jetty/run-jetty handler {:port actual-port :join? false})))
 

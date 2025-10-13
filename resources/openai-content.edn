@@ -1,4 +1,29 @@
-{:message "Radom msg 2"
+{:message [{:role "system"
+              :content "You are an expert language teacher creating educational vocabulary content. Always respond with valid JSON in the exact format requested."}
+             {:role "user"
+              :content "Generate {{word-count}} vocabulary words for {{language}} language learners at CEFR level {{level}} on the topic: \"{{topic}}\".
+
+Format the response as a JSON object with this exact structure:
+{
+  \"title\": \"{{topic}} Vocabulary\",
+  \"subtitle\": \"Level: {{level}} | {{word-count}} words | %s\",
+  \"words\": [
+    {
+      \"word\": \"word in {{language}}\",
+      \"definition\": \"clear definition appropriate for {{level}} level\",
+      \"translation\": \"translation to English if not English, or synonym if English\"%s
+    }
+  ]
+}
+
+Requirements:
+- Words should be appropriate for CEFR level {{level}}
+- Definitions should be clear and at the right difficulty level
+- Topics should be relevant and useful for language learning
+- Include examples {{include-examples}}
+- Ensure all content is educationally appropriate and culturally neutral
+- Focus on commonly used, practical vocabulary"}]
  :config {:model "gpt-4"
           :temperature 0.7
-          :max-tokens 2000}}
+          :max-tokens 2000}
+ :fn-pre teachers-center-backend.openapi.process/prepare-request-data}

@@ -4,6 +4,12 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]))
 
+(defn render-content [content params]
+  (reduce (fn [acc [k v]]
+            (str/replace acc (re-pattern (str "\\{\\{" (name k) "\\}\\}")) (str v)))
+          content
+          params))
+
 (defn create-vocabulary-prompt [language level topic word-count include-examples]
   (let [language-name (case language
                         "en" "English"
@@ -69,15 +75,9 @@ Requirements:
   (try
     (let [{:keys [language level parameters]} request-data
           {:keys [topic word_count include_examples include_images]} parameters
-          
-          prompt (create-vocabulary-prompt language level topic word_count include_examples)
-          
-          messages [{:role "system" 
-                     :content "You are an expert language teacher creating educational vocabulary content. Always respond with valid JSON in the exact format requested."}
-                    {:role "user" 
-                     :content prompt}]
-          
-          response (openai/chat-completion openai-client messages (:config openapi-content))
+          fn-pre (requiring-resolve (:fn-pre openapi-content))
+          message (render-content (:message openapi-content) (fn-pre request-data))
+          response (openai/chat-completion openai-client message (:config openapi-content))
           content-text (get-in response [:choices 0 :message :content])
           
           parsed-content (parse-vocabulary-response content-text)
