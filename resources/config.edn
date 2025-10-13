@@ -1,5 +1,5 @@
 {:teachers-center-backend/server
- {:port 3000
+ {:port #or [#env PORT 3000]
   :handler #ig/ref :teachers-center-backend/handler}
 
  :teachers-center-backend/handler
@@ -7,5 +7,5 @@
   :openai-content #include "openai-content.edn"}
 
  :teachers-center-backend/openai-client
- {:api-key "sk-test-key"
-  :base-url "https://api.openai.com/v1"}}
+ {:api-key #env OPENAI_API_KEY
+  :base-url #or [#env OPENAI_BASE_URL "https://api.openai.com/v1"]}}
