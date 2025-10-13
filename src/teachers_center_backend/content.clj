@@ -65,7 +65,7 @@ Requirements:
      :metadata {:word_count (count words)
                 :generated_at (str (java.time.Instant/now))}}))
 
-(defn generate-vocabulary [openai-client request-data]
+(defn generate-vocabulary [openai-client openapi-content request-data]
   (try
     (let [{:keys [language level parameters]} request-data
           {:keys [topic word_count include_examples include_images]} parameters
@@ -77,9 +77,7 @@ Requirements:
                     {:role "user" 
                      :content prompt}]
           
-          response (openai/chat-completion openai-client messages {:model "gpt-4"
-                                                                   :temperature 0.7
-                                                                   :max-tokens 2000})
+          response (openai/chat-completion openai-client messages (:config openapi-content))
           content-text (get-in response [:choices 0 :message :content])
           
           parsed-content (parse-vocabulary-response content-text)

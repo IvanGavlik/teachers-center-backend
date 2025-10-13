@@ -12,13 +12,13 @@
              :timestamp (str (java.time.Instant/now))
              :service "teachers-center-backend"}))
 
-(defn generate-content-handler [openai-client]
+(defn generate-content-handler [openai-client openapi-content]
   (fn [request]
     (try
       (let [body (:body request)
             content-type (:content_type body)
             result (case content-type
-                     "vocabulary" (content/generate-vocabulary openai-client body)
+                     "vocabulary" (content/generate-vocabulary openai-client openapi-content body)
                      "grammar" (content/generate-grammar openai-client body)
                      "reading" (content/generate-reading openai-client body)
                      "exercises" (content/generate-exercises openai-client body)
@@ -36,17 +36,20 @@
 (defroutes app-routes
   (GET "/health" [] health-handler)
   (POST "/api/generate" [] (fn [request]
-                             (let [openai-client (:openai-client request)]
-                               ((generate-content-handler openai-client) request))))
+                             (let [openai-client (:openapi-client request)
+                                   openai-content (:openapi-content request)]
+                               ((generate-content-handler openai-client openai-content) request))))
   (route/not-found {:success false :error "Route not found"}))
 
-(defn create-handler [openai-client]
-  (let [inject-client (fn [handler]
+(defn create-handler [openai-client openapi-content]
+  (let [inject (fn [handler]
                         (fn [request]
-                          ;; Inject openai-client into request for handlers
-                          (handler (assoc request :openai-client openai-client))))]
+                          ;; Inject into request for handlers
+                          (handler (assoc request
+                                     :openapi-client openai-client
+                                     :openapi-content openapi-content))))]
     (-> app-routes
-        inject-client
+        inject
         (wrap-json-body {:keywords? true})
         wrap-json-response
         (wrap-cors

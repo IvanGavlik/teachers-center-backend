@@ -5,6 +5,9 @@
             [teachers-center-backend.handler :as handler]
             [teachers-center-backend.openapi.core :as openai]))
 
+;; If some keys are plain data (like :messages), we can handle them generically:
+(defmethod ig/init-key :default [_ value] value)
+
 (defmethod ig/init-key :teachers-center-backend/server
   [_ {:keys [port handler]}]
   (let [env-port (env :port)
@@ -22,8 +25,8 @@
   (.stop server))
 
 (defmethod ig/init-key :teachers-center-backend/handler
-  [_ {:keys [openai-client]}]
-  (handler/create-handler openai-client))
+  [_ {:keys [openai-client openai-content]}]
+  (handler/create-handler openai-client openai-content))
 
 (defmethod ig/halt-key! :teachers-center-backend/handler
   [_ _]
