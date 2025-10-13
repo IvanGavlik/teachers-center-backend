@@ -1,15 +1,11 @@
 (ns user
   (:require [integrant.repl :as ig-repl]
             [integrant.repl.state :as state]
-            [clojure.java.io :as io]
-            [integrant.core :as ig]
-            [teachers-center-backend.system]))
+            [teachers-center-backend.system]
+            [teachers-center-backend.core :refer [load-config]]))
 
 (ig-repl/set-prep! (fn []
-                     (-> "config.edn"
-                         io/resource
-                         slurp
-                         ig/read-string)))
+                     (load-config)))
 
 (def go ig-repl/go)
 (def halt ig-repl/halt)

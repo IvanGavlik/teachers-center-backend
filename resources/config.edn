@@ -4,14 +4,8 @@
 
  :teachers-center-backend/handler
  {:openai-client #ig/ref :teachers-center-backend/openai-client
-  :openai-content #ig/ref :teachers-center-backend/openai-content}
+  :openai-content #include "openai-content.edn"}
 
  :teachers-center-backend/openai-client
  {:api-key "sk-test-key"
-  :base-url "https://api.openai.com/v1"}
-
-  :teachers-center-backend/openai-content
-  {:message "Radom msg"
-   :config {:model "gpt-4"
-            :temperature 0.7
-            :max-tokens 2000}}}
+  :base-url "https://api.openai.com/v1"}}
