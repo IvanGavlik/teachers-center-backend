@@ -26,4 +26,5 @@ Requirements:
  :config {:model "gpt-4"
           :temperature 0.7
           :max-tokens 2000}
- :fn-pre teachers-center-backend.openapi.process/prepare-request-data}
+ :fn-pre teachers-center-backend.openapi.process/prepare-request-data
+ :fn-post teachers-center-backend.openapi.process/process-response}
