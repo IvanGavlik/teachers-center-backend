@@ -1,5 +1,5 @@
 {:teachers-center-backend/server
- {:port #or [#env PORT 3000]
+ {:port #long #or [#env PORT 3000]
   :handler #ig/ref :teachers-center-backend/handler}
 
  :teachers-center-backend/handler
