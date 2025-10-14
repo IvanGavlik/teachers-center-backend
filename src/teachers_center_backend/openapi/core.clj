@@ -9,16 +9,28 @@
 
 (defn make-request [client endpoint payload]
   (try
-    (let [response (http/post (str (:base-url client) endpoint)
-                              {:headers {"Authorization" (str "Bearer " (:api-key client))
-                                         "Content-Type" "application/json"}
-                               :body (json/generate-string payload)
-                               :timeout 60000})]
-      (json/parse-string (:body response) true))
+    (let [url (str (:base-url client) endpoint)
+          body-json (json/generate-string payload)]
+      (let [response (http/post url
+                                {:headers {"Authorization" (str "Bearer " (:api-key client))
+                                           "Content-Type" "application/json"}
+                                 :body body-json
+                                 :throw-exceptions false
+                                 :timeout 60000})]
+        (if (= 200 (:status response))
+          (json/parse-string (:body response) true)
+          (do
+            (log/error "OpenAI API error response" {:status (:status response)
+                                                     :body (:body response)})
+            (throw (ex-info "OpenAI API returned error"
+                            {:status (:status response)
+                             :body (:body response)}))))))
     (catch Exception e
-      (log/error e "OpenAI API request failed")
+      (log/error e "OpenAI API request failed" {:message (.getMessage e)
+                                                 :class (class e)})
       (throw (ex-info "OpenAI API request failed"
-                      {:error (.getMessage e)} e)))))
+                      {:error (.getMessage e)
+                       :cause-type (class e)} e)))))
 
 (defn chat-completion [client messages {:keys [model temperature max-tokens]}]
   (make-request client "/chat/completions"

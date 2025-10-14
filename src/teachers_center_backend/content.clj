@@ -2,49 +2,24 @@
   (:require [teachers-center-backend.openapi.core :as openai]
             [cheshire.core :as json]
             [clojure.string :as str]
+            [clojure.walk :as walk]
             [clojure.tools.logging :as log]))
 
-(defn render-content [content params]
+(defn replace-placeholders [text params]
+  "Replace {{placeholder}} patterns in text with values from params map"
   (reduce (fn [acc [k v]]
             (str/replace acc (re-pattern (str "\\{\\{" (name k) "\\}\\}")) (str v)))
-          content
+          text
           params))
 
-(defn create-vocabulary-prompt [language level topic word-count include-examples]
-  (let [language-name (case language
-                        "en" "English"
-                        "de" "German" 
-                        "fr" "French"
-                        "es" "Spanish"
-                        "it" "Italian"
-                        "pt" "Portuguese"
-                        "English")]
-    (str "Generate " word-count " vocabulary words for " language-name " language learners at CEFR level " level 
-         " on the topic: \"" topic "\". "
-         
-         "Format the response as a JSON object with this exact structure:
-{
-  \"title\": \"" (str/capitalize topic) " Vocabulary\",
-  \"subtitle\": \"Level: " level " | " word-count " words | " language-name "\",
-  \"words\": [
-    {
-      \"word\": \"word in " language-name "\",
-      \"definition\": \"clear definition appropriate for " level " level\",
-      \"translation\": \"translation to English if not English, or synonym if English\""
-      (if include-examples 
-        ",\n      \"example\": \"example sentence using the word\""
-        "")
-    "}
-  ]
-}
-
-Requirements:
-- Words should be appropriate for CEFR level " level "
-- Definitions should be clear and at the right difficulty level
-- Topics should be relevant and useful for language learning
-- " (if include-examples "Include example sentences that demonstrate proper usage" "Do not include example sentences") "
-- Ensure all content is educationally appropriate and culturally neutral
-- Focus on commonly used, practical vocabulary")))
+(defn render-content [content params]
+  "Recursively render content structure, replacing placeholders only in string values"
+  (walk/postwalk
+    (fn [x]
+      (if (string? x)
+        (replace-placeholders x params)
+        x))
+    content))
 
 (defn parse-vocabulary-response [response-text]
   (try
@@ -71,20 +46,19 @@ Requirements:
      :metadata {:word_count (count words)
                 :generated_at (str (java.time.Instant/now))}}))
 
+; TODO I should have general name like generate
+; it accepts three functions - fn-pre, fn-process, fn-postprocess
+; this is to think about approach - how to do this
 (defn generate-vocabulary [openai-client openapi-content request-data]
   (try
-    (let [{:keys [language level parameters]} request-data
-          {:keys [topic word_count include_examples include_images]} parameters
-          fn-pre (requiring-resolve (:fn-pre openapi-content))
+    (let [fn-pre (requiring-resolve (:fn-pre openapi-content))
           message (render-content (:message openapi-content) (fn-pre request-data))
           response (openai/chat-completion openai-client message (:config openapi-content))
           content-text (get-in response [:choices 0 :message :content])
-          
           parsed-content (parse-vocabulary-response content-text)
           formatted-slides (format-vocabulary-slides parsed-content)]
       
-      (log/info "Successfully generated vocabulary content" 
-                {:topic topic :level level :word-count word_count})
+      (log/info "Successfully generated vocabulary content")
       formatted-slides)
     
     (catch Exception e
