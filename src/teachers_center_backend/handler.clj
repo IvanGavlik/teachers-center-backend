@@ -4,6 +4,7 @@
             [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
             [ring.middleware.cors :refer [wrap-cors]]
             [ring.util.response :refer [response status]]
+            [org.httpkit.server :refer [with-channel send! on-close]] ; web socket
             [clojure.tools.logging :as log]
             [teachers-center-backend.content :as content]))
 
@@ -11,6 +12,13 @@
   (response {:status "ok" 
              :timestamp (str (java.time.Instant/now))
              :service "teachers-center-backend"}))
+
+(defn ws-handler [req]
+  (with-channel req ch
+                ;; send "hello world" on connect
+                (send! ch "hello world")
+                ;; optional: handle close
+                (on-close ch (fn [status] (println "WebSocket closed:" status)))))
 
 (defn generate-content-handler [openai-client openapi-content]
   (fn [request]
@@ -35,6 +43,7 @@
 
 (defroutes app-routes
   (GET "/health" [] health-handler)
+  (GET "/ws" [] ws-handler)
   (POST "/api/generate" [] (fn [request]
                              (let [openai-client (:openapi-client request)
                                    openai-content (:openapi-content request)]
