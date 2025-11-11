@@ -9,7 +9,7 @@ Clojure backend service for the AI Slides Assistant, providing content generatio
 - **Integrant** - System component management
 - **Ring** - HTTP server abstraction
 - **Compojure** - Routing
-- **Jetty** - Web server
+- **http-kit** - Web server
 - **OpenAI API** - AI content generation
 
 ## Setup
@@ -49,8 +49,8 @@ Clojure backend service for the AI Slides Assistant, providing content generatio
    
    | Variable | Required | Default | Description |
    |----------|----------|---------|-------------|
-   | `OPENAI_API_KEY` | ✅ Yes | - | Your OpenAI API key for content generation |
-   | `PORT` | ❌ No | `3000` | Port number for the web server |
+   | `OPENAI_API_KEY` | ✅ Yes | -       | Your OpenAI API key for content generation |
+   | `PORT` | ❌ No | `2000`  | Port number for the web server |
    
    **Setting Environment Variables (Alternative Methods):**
    
@@ -58,13 +58,13 @@ Clojure backend service for the AI Slides Assistant, providing content generatio
      ```bash
      # Create .env file in project root
      echo "OPENAI_API_KEY=sk-your-key-here" > .env
-     echo "PORT=3000" >> .env
+     echo "PORT=2000" >> .env
      ```
    
    - **Export in shell (Temporary):**
      ```bash
      export OPENAI_API_KEY="sk-your-key-here"
-     export PORT=3000
+     export PORT=2000
      clj -M -m teachers-center-backend.core
      ```
    
@@ -154,7 +154,7 @@ Content-Type: application/json
 
 Test the vocabulary endpoint:
 ```bash
-curl -X POST http://localhost:3000/api/generate \
+curl -X POST http://localhost:2000/api/generate \
   -H "Content-Type: application/json" \
   -d '{
     "content_type": "vocabulary",

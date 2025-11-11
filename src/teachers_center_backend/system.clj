@@ -1,6 +1,6 @@
 (ns teachers-center-backend.system
   (:require [integrant.core :as ig]
-            [ring.adapter.jetty :as jetty]
+            [org.httpkit.server :as server]
             [teachers-center-backend.handler :as handler]
             [teachers-center-backend.openapi.core :as openai]))
 
@@ -10,7 +10,7 @@
 (defmethod ig/init-key :teachers-center-backend/server
   [_ {:keys [port handler]}]
   (println (str "Starting server on port " port))
-  (jetty/run-jetty handler {:port port :join? false}))
+  (server/run-server handler {:port port :join? false}))
 
 (defmethod ig/halt-key! :teachers-center-backend/server
   [_ server]
