@@ -4,6 +4,7 @@
             [teachers-center-backend.system]
             [teachers-center-backend.core :refer [load-config]]))
 
+; TODO move this to dev namespace
 (ig-repl/set-prep! (fn []
                      (load-config)))
 

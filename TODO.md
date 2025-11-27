@@ -1,3 +1,8 @@
+23.11.2025.
+start implementation of web socket
+
+
+13.11.2025.
 stao next to implement WebSocket comunication
 
 TODO - posalji mu ponovo ovu poruku takošer neka poglega moj FE (power point prezentacija) da vidi kako je postavljen 

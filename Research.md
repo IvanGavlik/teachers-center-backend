@@ -21,7 +21,7 @@
 - HTTP/2 Server Push 
 - REST with Polling 		
 
-## Flow management stratefies 
+## Flow management
 
 ## AI/LLM 
 - AI decided what to ask based on context

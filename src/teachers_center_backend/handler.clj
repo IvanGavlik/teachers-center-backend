@@ -13,6 +13,7 @@
              :timestamp (str (java.time.Instant/now))
              :service "teachers-center-backend"}))
 
+; TODO WITH CHANNEL IS DEPRECATED
 (defn ws-handler [req]
   (with-channel req ch
                 ;; send "hello world" on connect
