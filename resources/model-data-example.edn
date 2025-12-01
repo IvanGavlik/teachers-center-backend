@@ -1,0 +1,142 @@
+[
+  ;; First channel with 3 conversations (5+ messages each)
+  {:channel-name "spanish-beginner-class.pdf"
+   :user-id "user-123"
+   :conversations [
+     ;; Conversation 1: Vocabulary generation (5 messages)
+     {:conversation-id 1
+      :user "user-123"
+      :type "generate vocabulary"
+      :messages [{:message-id 1
+                  :user "user-123"
+                  :content "I need a vocabulary list for my Spanish A1 class about food and restaurants"}
+                 {:message-id 2
+                  :user "chat-gpt"
+                  :content "I'd be happy to help! What format would you like the vocabulary list in?"}
+                 {:message-id 3
+                  :user "user-123"
+                  :content "I need it as flashcards with Spanish word, English translation, and example sentences"}
+                 {:message-id 4
+                  :user "chat-gpt"
+                  :content "Perfect! How many vocabulary items would you like?"}
+                 {:message-id 5
+                  :user "user-123"
+                  :content "Around 15-20 words please"}
+                 {:message-id 6
+                  :user "chat-gpt"
+                  :content "Great! Here's your vocabulary list with 18 food and restaurant-related words..."}]
+      :state "completed"
+      :requirements {:format "flashcards"
+                     :length "15-20"
+                     :topic "food and restaurants"
+                     :level "A1"
+                     :language "Spanish"}}
+
+     ;; Conversation 2: Create homework (6 messages)
+     {:conversation-id 2
+      :user "user-123"
+      :type "create homework"
+      :messages [{:message-id 1
+                  :user "user-123"
+                  :content "Can you create homework exercises for present tense verbs?"}
+                 {:message-id 2
+                  :user "chat-gpt"
+                  :content "Sure! What level are your students at?"}
+                 {:message-id 3
+                  :user "user-123"
+                  :content "They're A2 level, intermediate beginners"}
+                 {:message-id 4
+                  :user "chat-gpt"
+                  :content "What types of exercises would you prefer? Fill-in-the-blank, multiple choice, or writing prompts?"}
+                 {:message-id 5
+                  :user "user-123"
+                  :content "Mix of fill-in-the-blank and writing prompts"}
+                 {:message-id 6
+                  :user "chat-gpt"
+                  :content "How many exercises total?"}
+                 {:message-id 7
+                  :user "user-123"
+                  :content "10 exercises total"}]
+      :state "gathering-info"
+      :requirements {:format "mixed"
+                     :length "10"
+                     :topic "present tense verbs"
+                     :level "A2"
+                     :exercise-types ["fill-in-blank" "writing-prompts"]}}
+
+     ;; Conversation 3: General question (7 messages)
+     {:conversation-id 3
+      :user "user-123"
+      :type "general"
+      :messages [{:message-id 1
+                  :user "user-123"
+                  :content "What are some effective ways to teach pronunciation to beginners?"}
+                 {:message-id 2
+                  :user "chat-gpt"
+                  :content "There are several effective methods! Which language are you teaching?"}
+                 {:message-id 3
+                  :user "user-123"
+                  :content "Spanish for English speakers"}
+                 {:message-id 4
+                  :user "chat-gpt"
+                  :content "Great! Here are some pronunciation teaching strategies specific to Spanish: 1) Focus on the five pure vowel sounds..."}
+                 {:message-id 5
+                  :user "user-123"
+                  :content "That's helpful! Do you have any activities I can use in class?"}
+                 {:message-id 6
+                  :user "chat-gpt"
+                  :content "Absolutely! Here are 5 engaging pronunciation activities: 1) Minimal pairs practice..."}
+                 {:message-id 7
+                  :user "user-123"
+                  :content "Perfect, thank you!"}]
+      :state "completed"
+      :requirements {:topic "pronunciation teaching"
+                     :language "Spanish"
+                     :student-level "beginner"}}]}
+
+  ;; Second channel with 2 conversations (2+ messages each)
+  {:channel-name "french-intermediate.pdf"
+   :user-id "user-456"
+   :conversations [
+     ;; Conversation 1: Grammar exercise (3 messages)
+     {:conversation-id 1
+      :user "user-456"
+      :type "create homework"
+      :messages [{:message-id 1
+                  :user "user-456"
+                  :content "I need grammar exercises on French subjunctive mood"}
+                 {:message-id 2
+                  :user "chat-gpt"
+                  :content "What difficulty level and how many exercises would you like?"}
+                 {:message-id 3
+                  :user "user-456"
+                  :content "B1 level, about 8 exercises"}]
+      :state "gathering-info"
+      :requirements {:format ""
+                     :length "8"
+                     :topic "subjunctive mood"
+                     :level "B1"
+                     :language "French"}}
+
+     ;; Conversation 2: Reading comprehension (4 messages)
+     {:conversation-id 2
+      :user "user-456"
+      :type "generate reading"
+      :messages [{:message-id 1
+                  :user "user-456"
+                  :content "Create a reading passage about French culture"}
+                 {:message-id 2
+                  :user "chat-gpt"
+                  :content "What aspect of French culture interests you? And what's the target proficiency level?"}
+                 {:message-id 3
+                  :user "user-456"
+                  :content "French cuisine, B2 level students"}
+                 {:message-id 4
+                  :user "chat-gpt"
+                  :content "Here's a B2-level reading passage about French culinary traditions and regional specialties..."}]
+      :state "completed"
+      :requirements {:format "reading-passage"
+                     :length "300-400 words"
+                     :topic "French cuisine"
+                     :level "B2"
+                     :language "French"}}]}]
