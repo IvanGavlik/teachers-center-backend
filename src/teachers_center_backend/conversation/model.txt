@@ -1,0 +1,42 @@
+; look into resource for example
+[ ;list of the channels
+    {
+    :chanel-name "pdf-name"
+    :user-id "user 123"
+    :conversations [ ; list of the conversations
+        {
+        :conversation-id 1 - created every time when we change type in the message
+        :user "123"
+        :type "generate vocabulary" ˇ"create homework" ˇ| "unknow" | "general" ...
+        :messages [ ; list of the messages
+            {:message-id 1 :user "123" :content "Hello help me with ..."}
+            {:message-id 2 :user "chat-gpt" :content "Give me more details"}]
+        :state "gathering-info"
+        :requirements {
+            :format ""
+            :length "112"
+            :topic "123"
+            :homework "123"
+        }
+        :client-info TODO (client specific data)
+        :general-settings TODO
+        }
+
+        {
+        :conversation-id 2
+        :user "123"
+        :messages [ ; list of the messages
+        {:message-id 1 :user "123" :content "Hello help me with ..."}
+        {:message-id 2 :user "chat-gpt" :content "Here is the response"}]
+        :state "completed"
+        :requirements {:format ""
+               :length "112"
+               :topic "123"
+               :homework "123"} }
+        ]
+    }
+]
+
+
+
+
