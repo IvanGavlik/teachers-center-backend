@@ -32,6 +32,8 @@
 ;  - BE: Returns [conv_456, conv_789, ...]
 ;  - FE: User clicks conv_456 → loads history → continues chatting
 
+; TODO what is correct structure for this
+; on every disscooect/connect do i crate new room_channel_connection or new conversation
 {:user-id "1" :room_channel_connection [{:conversation-id "1" :messages []}]}
 
 [{:room_channel_connection
