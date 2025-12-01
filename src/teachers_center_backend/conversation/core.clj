@@ -32,7 +32,9 @@
 ;  - BE: Returns [conv_456, conv_789, ...]
 ;  - FE: User clicks conv_456 → loads history → continues chatting
 
-; TODO what is correct structure for this
+; Correct structure (data model) - model.txt
+;   * but what do I need for first implemenation (just simple chat-gpt wrapper)
+;   * if I have good api for FE (BE implementation can change)
 ; on every disscooect/connect do i crate new room_channel_connection or new conversation
 {:user-id "1" :room_channel_connection [{:conversation-id "1" :messages []}]}
 
@@ -98,7 +100,7 @@
   )
 
 (defn current-messages [conversation]
-  ; at this point I have only one conversation
+  ; TODO we need to send all messages chat got does not remember history - investigate how to do this
   (let [user-id (get conversation :user-id)
         messages (:messages (first (get conversation :room_channel_connection)))]
     messages))
@@ -117,11 +119,11 @@
     ))
 
 
-; TODO NEXT WRITE FEW tests for few conversatoins to see how this will work
+; TODO NEXT WRITE FEW tests for few conversations to see how this will work
 ; explore ask more info, see preview, final answer (also the starting new conversation)
 
-; TODO If I have n convesations does chat-gpr saves is avare of all messages
-; or I have to think about some strategy (send summary or all messages to him)
+; TODO chat-gpt is not avare of all messages
+;  think about some strategy (send summary or all messages to him)
 ; - open new conversation in chat gpt for each new conversation in url or until we are end (web socket disconects)
 ; TODO do I want to save messages or not the claude approach (for now save)
 (defn conversation [req]
