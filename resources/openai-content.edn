@@ -1,7 +1,39 @@
 {:message [{:role "system"
-              :content "You are an expert language teacher creating educational vocabulary content. Always respond with valid JSON in the exact format requested."}
-             {:role "user"
-              :content "Generate {{word-count}} vocabulary words for {{language}} language learners at CEFR level {{level}} on the topic: \"{{topic}}\".
+            :content "You are an expert language teacher creating educational vocabulary content. Always respond with valid JSON in the exact format requested."}
+           {:role "user"
+            :content "Request is:
+              {{request}}
+
+Request Requirements:
+- Request has to define number of words to generate
+- Request has to define language
+- Request has to define language level in CEFR. Words should be appropriate for CEFR level
+- Request has to define vocabulary topic
+- Request has to define do we want examples. If not mentioned do not include if mentioned ask how many if not understable for request
+
+General Requirements
+- Definitions should be clear and at the right difficulty level
+- Topics should be relevant and useful for language learning
+
+First check are all requirements meet if not answer user to specify what is missing.
+Example
+  Requirement states that teacher specify level
+  Level is missing
+  Response should be something like Please specify language level format response as a JSON object with this exact structure:
+  {
+  \"requirements-not-meet\": \"your message\"
+  }
+
+Continue with second step only if all requirements are meet.
+
+Use current conversation as contest to know what we have been talking with teacher
+If we dont have anything in the current conversation this means that this is start of the conversation
+Current conversation
+{{messages}}
+
+Generate content as teacher asked for based on the request requirements and current conversation
+Ensure all content is educationally appropriate and culturally neutral
+Focus on commonly used, practical vocabulary
 
 Format the response as a JSON object with this exact structure:
 {
@@ -14,15 +46,7 @@ Format the response as a JSON object with this exact structure:
       \"translation\": \"translation to English if not English, or synonym if English\"%s
     }
   ]
-}
-
-Requirements:
-- Words should be appropriate for CEFR level {{level}}
-- Definitions should be clear and at the right difficulty level
-- Topics should be relevant and useful for language learning
-- Include examples {{include-examples}}
-- Ensure all content is educationally appropriate and culturally neutral
-- Focus on commonly used, practical vocabulary"}]
+}"}]
  :config {:model "gpt-4"
           :temperature 0.7
           :max-tokens 2000}

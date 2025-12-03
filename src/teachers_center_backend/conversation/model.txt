@@ -32,7 +32,8 @@
         :requirements {:format ""
                :length "112"
                :topic "123"
-               :homework "123"} }
+               :homework "123"}
+        }
         ]
     }
 ]

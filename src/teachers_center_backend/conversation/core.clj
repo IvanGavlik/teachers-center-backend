@@ -1,5 +1,14 @@
-(ns teachers-center-backend.conversation.core)
+(ns teachers-center-backend.conversation.core
+  (:require [teachers-center-backend.openapi.core :as openai]
+            [teachers-center-backend.content :as content]
+            [clojure.edn :as edn]
+            [cheshire.core :as json]
+            [clojure.java.io :as io]))
 
+; TODO - think simple working example for implementation v1
+;  (do I need redis and postgres do I have client data)
+; what about chatgpt before implememing think more about complicated cases and how can I
+; go from v1 to v2 and v3 ... (V3 - maybe pdf support)
 
 ;   Lifecycle Example
 ;
@@ -36,97 +45,110 @@
 ;   * but what do I need for first implemenation (just simple chat-gpt wrapper)
 ;   * if I have good api for FE (BE implementation can change)
 ; on every disscooect/connect do i crate new room_channel_connection or new conversation
-{:user-id "1" :room_channel_connection [{:conversation-id "1" :messages []}]}
 
-[{:room_channel_connection
-  [{:conversation
-    [{:message "1"}
-     {:message "2"}]
-    }]}]
+(defn get-conversation [channel-name id db]
+  ; TODO full implementation when I have db filter by channel name
+  {:conversation-id id
+   :user "user-123"
+   :type "generate vocabulary"
+   :messages [{:message-id 1
+               :user "user-123"
+               :content "I need a vocabulary list for my Spanish A1 class about food and restaurants"}
+              {:message-id 2
+               :user "chat-gpt"
+               :content "I'd be happy to help! What format would you like the vocabulary list in?"}
+              {:message-id 3
+               :user "user-123"
+               :content "I need it as flashcards with Spanish word, English translation, and example sentences"}
+              {:message-id 4
+               :user "chat-gpt"
+               :content "Perfect! How many vocabulary items would you like?"}
+              {:message-id 5
+               :user "user-123"
+               :content "Around 15-20 words please"}
+              {:message-id 6
+               :user "chat-gpt"
+               :content "Great! Here's your vocabulary list with 18 food and restaurant-related words..."}]
+   :state "completed"
+   :requirements {:format "flashcards"
+                  :length "15-20"
+                  :topic "food and restaurants"
+                  :level "A1"
+                  :language "Spanish"}})
 
-(defn get-conversation [id db]
-  {:user-id "TODO" :room_channel_connection [{:conversation-id id :messages []}]})
+(defn create-empty-conversation [user-id]
+  {:conversation-id 1
+   :user user-id
+   :type "generate vocabulary"
+   :messages []
+   :state "completed"
+   :requirements {:format "flashcards"
+                  :length "15-20"
+                  :topic "food and restaurants"
+                  :level "A1"
+                  :language "Spanish"}})
 
 (defn create-conversation [user-id]
-  {:user-id user-id :room_channel_connection [{:conversation-id (rand-int 100000) :messages []}]})
+  {:conversation-id 1
+   :user user-id
+   :type "generate vocabulary"
+   :messages [{:message-id 1
+               :user "user-123"
+               :content "I need a vocabulary list for my Spanish A1 class about food and restaurants"}
+              {:message-id 2
+               :user "chat-gpt"
+               :content "I'd be happy to help! What format would you like the vocabulary list in?"}
+              {:message-id 3
+               :user "user-123"
+               :content "I need it as flashcards with Spanish word, English translation, and example sentences"}
+              {:message-id 4
+               :user "chat-gpt"
+               :content "Perfect! How many vocabulary items would you like?"}
+              {:message-id 5
+               :user "user-123"
+               :content "Around 15-20 words please"}
+              {:message-id 6
+               :user "chat-gpt"
+               :content "Great! Here's your vocabulary list with 18 food and restaurant-related words..."}]
+   :state "completed"
+   :requirements {:format "flashcards"
+                  :length "15-20"
+                  :topic "food and restaurants"
+                  :level "A1"
+                  :language "Spanish"}})
 
 (defn current-conversation [req db]
-  (let [user-id (get req :user-id)
-        conversation (get req :conversation-id)]
-    (if (seq conversation)
-      (get-conversation (get req :conversation-id) db)
-      (create-conversation user-id))))
+  (if (seq (:conversation-id req))
+    (get-conversation (:channel-name req) (:conversation-id req) db)
+    (create-empty-conversation (:user-id req))))                  ; create-conversation create-empty-conversation
 
-(comment
-  (def first-request { :user-id "123"
-                      :conversation-id nil
-                      :content "Help me plan a lesson" })
-  (def second-request { :user-id "123"
-                       :conversation-id "conv_456"
-                       :content "Help me plan a lesson" })
-  (current-conversation first-request nil)
-  (current-conversation second-request nil)
+
+(defn get-conversation-template [type]
+  "v1 Read requirements from edn file"
+  "v2 Read requirements from db - also include (student constraints) class info"
+  (-> (io/resource "openai-content.edn")
+      slurp
+      edn/read-string))
+
+(defn ask-chat-gpt [openapi-client conversation-config current-messages request-msg]
+  (let [msg-template (:message conversation-config)
+        message (content/render-content msg-template {:request request-msg
+                                                      :messages current-messages})
+        config (:config conversation-config)]
+    (openai/chat-completion openapi-client message config))
   )
-
-
-(comment
-  (def empty-conv {:user-id "123" :room_channel_connection [{:conversation-id (rand-int 100000)
-                                                             :state :gathering-info
-                                                             :requirements {:format ""
-                                                                            :length "112"
-                                                                            :topic "123"
-                                                                            :homework "123"}
-                                                             :messages []}]})
-  (def conv-one-msg {:user-id "123" :room_channel_connection [{:conversation-id (rand-int 100000)
-                                                               :state :gathering-info
-                                                               :requirements {:format ""
-                                                                              :length "112"
-                                                                              :topic "123"
-                                                                              :homework "123"}
-                                                               :messages [{:id    (rand-int 10)
-                                                                           :created-at "timestap"
-                                                                           :user-id "123"
-                                                                           :content "Helo me create lesssion"
-                                                                           }
-                                                                          {:id    (rand-int 100)
-                                                                           :created-at "timestap"
-                                                                           :user-id "chat-gpt"
-                                                                           :content "Here is the content"
-                                                                           }
-                                                                          ]}]})
-
-  (current-messages empty-conv)
-  (current-messages conv-one-msg)
-  )
-
-(defn current-messages [conversation]
-  ; TODO we need to send all messages chat got does not remember history - investigate how to do this
-  (let [user-id (get conversation :user-id)
-        messages (:messages (first (get conversation :room_channel_connection)))]
-    messages))
-
-
-(defn ask-chat-gpt [conversation request-msg]
-  (let [requirements (:requirements conversation)
-        system-prompt ("from edn file")]
-    (str "I am asking chat gpt passing requirements" requirements
-         " system " system-prompt "user massage " request-msg "reciving msg in specific format")
-    {:more-info true
-     :content   "I have final answer app will mark conversation as completed"}
-    ; TODO think about this
-    ; it can ask for more info
-    ; we can ask for preview
-    ))
 
 
 ; TODO NEXT WRITE FEW tests for few conversations to see how this will work
 ; explore ask more info, see preview, final answer (also the starting new conversation)
 
 ; TODO chat-gpt is not avare of all messages
-;  think about some strategy (send summary or all messages to him)
+;  think about some strategy (send summary or all messages to him for now send all messages form current conversation
+;
 ; - open new conversation in chat gpt for each new conversation in url or until we are end (web socket disconects)
 ; TODO do I want to save messages or not the claude approach (for now save)
 (defn conversation [req]
+  "request have :user-id :channel-name :conversation-id :type :content"
   ; get room or create new one - for now we only have one
   ; get conversation or create new one
   ; get messages - I dont need to send message to chat gpt just send him last one from the reques
@@ -134,9 +156,33 @@
   ; check state(GATHERING_INFO/GENERATE) and slots (tracking requirements - what is missing) - this is done by chatgpt
   ; if missing something ask (validation), if complete generate answer
 
-  (let [conversation (current-conversation req nil) ; TODO without the messages I dont need to send them to chat gpt I hope test this
-        message (current-messages conversation)  ; - I dont need to send message to chat gpt just send him last one from the reques
-        request-msg (:content req)]
-    (ask-chat-gpt conversation request-msg))
+  (let [
+        client  {:api-key "REMOVED-SECRET",
+                 :base-url "https://api.openai.com/v1"}
+        conversation-config (get-conversation-template (:type req))
+        db nil
+        current-messages (:messages (current-conversation req db))
+        request-msg (:content req)
+        res (ask-chat-gpt client conversation-config current-messages request-msg)
+        res-content (:content (:message (first (:choices res))))
+        res-data (json/parse-string res-content true)]
+      (if (:requirements-not-meet res-data)
+        (do
+          (prn "mark conversation as  as not done "))
+        (do
+          ;TODO if CONVERSATION is done no need to sent IN THE REquest message cuttnet massage
+          ; we create new conversation
+          (prn "mark conversation as done")))
+      res-data
+    )
   )
 
+
+(comment
+  ; TODO test with contesxt in which we have current message and it has to continue conversation
+  (let [req {:user-id "user-123"
+             :type "generate vocabulary"
+             :content "I need a vocabulary list for my Spanish A1 class about food and restaurants"
+             }
+        res (conversation req)]
+   (prn "data" res)))
