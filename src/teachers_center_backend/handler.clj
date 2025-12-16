@@ -4,9 +4,10 @@
             [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
             [ring.middleware.cors :refer [wrap-cors]]
             [ring.util.response :refer [response status]]
-            [org.httpkit.server :refer [with-channel send! on-close]] ; web socket
+            [org.httpkit.server :refer [with-channel send! on-close on-receive]] ; web socket
             [clojure.tools.logging :as log]
-            [teachers-center-backend.content :as content]))
+            [teachers-center-backend.content :as content]
+            [teachers-center-backend.conversation.ws :as conversation-ws]))
 
 (defn health-handler [_]
   (response {:status "ok" 
@@ -18,6 +19,10 @@
   (with-channel req ch
                 ;; send "hello world" on connect
                 (send! ch "hello world")
+
+                (on-receive ch (fn [msg]
+                                 (send! ch (conversation-ws/on-request-callback msg))))
+
                 ;; optional: handle close
                 (on-close ch (fn [status] (println "WebSocket closed:" status)))))
 

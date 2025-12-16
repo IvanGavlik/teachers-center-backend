@@ -1,6 +1,12 @@
+12.11.2025.
+create web-scket-tutorial with example implementationa
+use this as starting point to finish and make impl for web socket 
+and then implement client 
+
+After this lets go to production alpha version
+
 23.11.2025.
 start implementation of web socket
-
 
 13.11.2025.
 stao next to implement WebSocket comunication

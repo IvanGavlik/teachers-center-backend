@@ -5,6 +5,8 @@
             [cheshire.core :as json]
             [clojure.java.io :as io]))
 
+; TODO next step redis DB
+
 ; TODO - think simple working example for implementation v1
 ;  (do I need redis and postgres do I have client data)
 ; what about chatgpt before implememing think more about complicated cases and how can I
@@ -157,8 +159,7 @@
   ; if missing something ask (validation), if complete generate answer
 
   (let [
-        client  {:api-key "REMOVED-SECRET",
-                 :base-url "https://api.openai.com/v1"}
+        client  {:key "123"}
         conversation-config (get-conversation-template (:type req))
         db nil
         current-messages (:messages (current-conversation req db))
