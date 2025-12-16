@@ -17,7 +17,10 @@
 (defn ws-handler [open-api-client req]
   (with-channel req ch
                 ;; send "hello world" on connect
-                (send! ch "hello world")
+                ;; TODO on connect should I based on user-id and :channel-id maybe
+                ;; maybe even conversation-id fetch/get current conversion and how to handle this
+                ;; also what about user logs
+                ; (send! ch "hello world")
 
                 (on-receive ch (fn [msg]
                                  (send! ch (conversation-ws/on-request-callback open-api-client msg))))

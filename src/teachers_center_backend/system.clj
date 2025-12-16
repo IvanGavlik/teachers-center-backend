@@ -15,7 +15,13 @@
 (defmethod ig/halt-key! :teachers-center-backend/server
   [_ server]
   (println "Stopping server")
-  (.stop server))
+  (when server
+    (try
+      (if (fn? server)
+        (println "Warning: server is a function, not a server object. State may be corrupted.")
+        (.stop server))
+      (catch Exception e
+        (println "Error stopping server:" (.getMessage e))))))
 
 (defmethod ig/init-key :teachers-center-backend/handler
   [_ {:keys [openai-client openai-content]}]

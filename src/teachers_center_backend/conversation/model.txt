@@ -12,7 +12,7 @@
             {:message-id 1 :user "123" :content "Hello help me with ..."}
             {:message-id 2 :user "chat-gpt" :content "Give me more details"}]
         :state "gathering-info"
-        :requirements {
+        :requirements { TODO has to be implemented in the future for now handling it in the openai-content.edn
             :format ""
             :length "112"
             :topic "123"

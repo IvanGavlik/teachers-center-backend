@@ -3,7 +3,8 @@
             [teachers-center-backend.content :as content]
             [clojure.edn :as edn]
             [cheshire.core :as json]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.tools.logging :as log]))
 
 ; TODO next step redis DB
 
@@ -78,13 +79,13 @@
                   :level "A1"
                   :language "Spanish"}})
 
-(defn create-empty-conversation [user-id]
-  {:conversation-id 1
+(defn create-empty-conversation [user-id type requirements]
+  {:conversation-id (rand-int 100000)
    :user user-id
-   :type "generate vocabulary"
+   :type type
    :messages []
-   :state "completed"
-   :requirements {:format "flashcards"
+   :state :gathering-info ; TODO can be completed or gathering-info
+   :requirements (if (seq requirements) requirements {}) #_{:format "flashcards" ; TODO for now implemeted in the model (openai-content.edn file)
                   :length "15-20"
                   :topic "food and restaurants"
                   :level "A1"
@@ -120,9 +121,9 @@
                   :language "Spanish"}})
 
 (defn current-conversation [req db]
-  (if (seq (:conversation-id req))
+  (if (seq (:conversation-id req))                          ; TODO do I have to merge for DB and req (if both exist)
     (get-conversation (:channel-name req) (:conversation-id req) db)
-    (create-empty-conversation (:user-id req))))                  ; create-conversation create-empty-conversation
+    (create-empty-conversation (:user-id req) (:type req) (:requirements req))))
 
 
 (defn get-conversation-template [type]
@@ -136,6 +137,7 @@
   (let [msg-template (:message conversation-config)
         message (content/render-content msg-template {:request request-msg
                                                       :messages current-messages})
+        _ (prn "message for chat gpt " message)
         config (:config conversation-config)]
     (openai/chat-completion openapi-client message config))
   )
@@ -150,7 +152,8 @@
 ; - open new conversation in chat gpt for each new conversation in url or until we are end (web socket disconects)
 ; TODO do I want to save messages or not the claude approach (for now save)
 (defn conversation [open-api-client req]
-  "request have :user-id :channel-name :conversation-id :type :content"
+  "request have :user-id :channel-name :conversation-id :type :content
+    :requirements just example #_{:format \"flashcards\"\n                  :length \"15-20\"\n                  :topic \"food and restaurants\"\n                  :level \"A1\"\n                  :language \"Spanish\"}"
   ; get room or create new one - for now we only have one
   ; get conversation or create new one
   ; get messages - I dont need to send message to chat gpt just send him last one from the reques
@@ -158,20 +161,23 @@
   ; check state(GATHERING_INFO/GENERATE) and slots (tracking requirements - what is missing) - this is done by chatgpt
   ; if missing something ask (validation), if complete generate answer
 
+  (log/debug "req " req)
   (let [conversation-config (get-conversation-template (:type req))
         db nil
         current-messages (:messages (current-conversation req db))
+        _ (log/debug "current-messages" current-messages)
         request-msg (:content req)
         res (ask-chat-gpt open-api-client conversation-config current-messages request-msg)
         res-content (:content (:message (first (:choices res))))
+        _ (log/debug "res-content " res-content)
         res-data (json/parse-string res-content true)]
       (if (:requirements-not-meet res-data)
         (do
-          (prn "mark conversation as  as not done "))
+          (log/debug "mark conversation as  as not done "))
         (do
           ;TODO if CONVERSATION is done no need to sent IN THE REquest message cuttnet massage
           ; we create new conversation
-          (prn "mark conversation as done")))
+          (log/debug "mark conversation as done")))
       res-data
     )
   )
