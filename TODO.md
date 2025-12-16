@@ -1,3 +1,6 @@
+16.12.2025
+REPL log levels set 
+
 12.11.2025.
 create web-scket-tutorial with example implementationa
 use this as starting point to finish and make impl for web socket 

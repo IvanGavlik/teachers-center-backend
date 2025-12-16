@@ -14,14 +14,13 @@
              :timestamp (str (java.time.Instant/now))
              :service "teachers-center-backend"}))
 
-; TODO WITH CHANNEL IS DEPRECATED
-(defn ws-handler [req]
+(defn ws-handler [open-api-client req]
   (with-channel req ch
                 ;; send "hello world" on connect
                 (send! ch "hello world")
 
                 (on-receive ch (fn [msg]
-                                 (send! ch (conversation-ws/on-request-callback msg))))
+                                 (send! ch (conversation-ws/on-request-callback open-api-client msg))))
 
                 ;; optional: handle close
                 (on-close ch (fn [status] (println "WebSocket closed:" status)))))
@@ -49,7 +48,7 @@
 
 (defroutes app-routes
   (GET "/health" [] health-handler)
-  (GET "/ws" [] ws-handler)
+  (GET "/ws" [] (fn [request] (ws-handler (:openapi-client request) request)))
   (POST "/api/generate" [] (fn [request]
                              (let [openai-client (:openapi-client request)
                                    openai-content (:openapi-content request)]

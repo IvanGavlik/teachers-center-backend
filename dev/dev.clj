@@ -14,13 +14,13 @@
 (def reset-all ig-repl/reset-all)
 
 
-(comment
-  (def socket
-    (ws-client/connect "ws://localhost:2000/ws?name=John"
-                       :on-receive (fn [msg] (println "Received:" msg))
-                       :on-close (fn [status reason] (println "Closed:" status reason))
-                       :on-error (fn [e] (println "Error:" e))))
+(defn send-one-time-ws-request  []
+  (let [socket (ws-client/connect "ws://localhost:2000/ws?name=John"
+                                  :on-receive (fn [msg] (println "Received:" msg))
+                                  :on-close (fn [status reason] (println "Closed:" status reason))
+                                  :on-error (fn [e] (println "Error:" e)))]
+    (ws-client/send-msg socket "Hello from REPL! 3")
+    (ws-client/close socket)))
 
-  (ws-client/send-msg socket "Hello from REPL!")
-  ;; Close when done
-  (ws-client/close socket))
+(comment
+  (send-one-time-ws-request))

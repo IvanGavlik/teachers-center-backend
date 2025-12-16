@@ -149,7 +149,7 @@
 ;
 ; - open new conversation in chat gpt for each new conversation in url or until we are end (web socket disconects)
 ; TODO do I want to save messages or not the claude approach (for now save)
-(defn conversation [req]
+(defn conversation [open-api-client req]
   "request have :user-id :channel-name :conversation-id :type :content"
   ; get room or create new one - for now we only have one
   ; get conversation or create new one
@@ -158,13 +158,11 @@
   ; check state(GATHERING_INFO/GENERATE) and slots (tracking requirements - what is missing) - this is done by chatgpt
   ; if missing something ask (validation), if complete generate answer
 
-  (let [
-        client  {:key "123"}
-        conversation-config (get-conversation-template (:type req))
+  (let [conversation-config (get-conversation-template (:type req))
         db nil
         current-messages (:messages (current-conversation req db))
         request-msg (:content req)
-        res (ask-chat-gpt client conversation-config current-messages request-msg)
+        res (ask-chat-gpt open-api-client conversation-config current-messages request-msg)
         res-content (:content (:message (first (:choices res))))
         res-data (json/parse-string res-content true)]
       (if (:requirements-not-meet res-data)
