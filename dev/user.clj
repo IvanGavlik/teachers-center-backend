@@ -6,7 +6,7 @@
   ;; Development workflow
   (dev/go)     ;; Start the system
   (dev/halt)   ;; Stop the system
-  (dev/reset)  ;; Restart the system
+  (dev/reset)  ;; Restart the systemC
   
   ;; Access the running system
   state/system

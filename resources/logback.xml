@@ -1,0 +1,17 @@
+<configuration>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- Set root level to INFO -->
+  <root level="INFO">
+    <appender-ref ref="STDOUT" />
+  </root>
+
+  <!-- Optional: Set specific namespace levels -->
+  <logger name="teachers-center-backend" level="INFO"/>
+  <logger name="org.httpkit" level="INFO"/>
+  <logger name="org.eclipse.jetty.util" level="INFO"/>
+</configuration>

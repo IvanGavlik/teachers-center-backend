@@ -25,7 +25,7 @@
           ;; Call conversation logic
           response (conversation/conversation open-api-client request-data)
 
-          _ (log/debug "Conversation response:" response)
+          _ (log/info "Conversation response:" response)
 
           ;; Convert response to JSON string
           json-response (json/generate-string response)]
