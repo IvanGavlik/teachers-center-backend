@@ -7,7 +7,7 @@
         {
         :conversation-id 1 - created every time when we change type in the message
         :user "123"
-        :type "generate vocabulary" ˇ"create homework" ˇ| "unknow" | "general" ...
+        :type "vocabulary" | "grammar" | "quiz" | "homework"   ... TODO general in next version
         :messages [ ; list of the messages
             {:message-id 1 :user "123" :content "Hello help me with ..."}
             {:message-id 2 :user "chat-gpt" :content "Give me more details"}]

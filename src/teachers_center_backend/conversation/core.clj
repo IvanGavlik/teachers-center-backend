@@ -127,11 +127,18 @@
 
 
 (defn get-conversation-template [type]
-  "v1 Read requirements from edn file"
-  "v2 Read requirements from db - also include (student constraints) class info"
-  (-> (io/resource "openai-content.edn")
-      slurp
-      edn/read-string))
+  "Load template based on type: vocabulary, grammar, quiz, homework
+   Files: openai-vocabulary-content.edn, openai-grammar-content.edn, etc."
+  (let [type-name (if (keyword? type) (name type) (str type))
+        filename (str "openai-" type-name "-content.edn")
+        resource (io/resource filename)]
+    (if resource
+      (-> resource slurp edn/read-string)
+      (do
+        (log/warn "Template not found for type:" type-name ", falling back to vocabulary")
+        (-> (io/resource "openai-vocabulary-content.edn")
+            slurp
+            edn/read-string)))))
 
 (defn ask-chat-gpt [openapi-client conversation-config current-messages request-msg]
   (let [msg-template (:message conversation-config)
@@ -162,7 +169,9 @@
   ; if missing something ask (validation), if complete generate answer
 
   (log/debug "req " req)
-  (let [conversation-config (get-conversation-template (:type req))
+  (let [req-type (:type req)
+        type-name (if (keyword? req-type) (name req-type) (str req-type))
+        conversation-config (get-conversation-template req-type)
         db nil
         current-messages (:messages (current-conversation req db))
         _ (log/debug "current-messages" current-messages)
@@ -173,14 +182,11 @@
         res-data (json/parse-string res-content true)]
       (if (:requirements-not-meet res-data)
         (do
-          (log/debug "mark conversation as  as not done "))
+          (log/debug "mark conversation as not done"))
         (do
-          ;TODO if CONVERSATION is done no need to sent IN THE REquest message cuttnet massage
-          ; we create new conversation
           (log/debug "mark conversation as done")))
-      res-data
-    )
-  )
+      ;; Include type in response for frontend routing
+      (assoc res-data :type type-name)))
 
 
 (comment

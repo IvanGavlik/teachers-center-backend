@@ -1,0 +1,99 @@
+{:message
+ [{:role "system"
+   :content "You are an expert foreign language teacher creating educational grammar content for classroom presentations.
+IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }."}
+
+  {:role "user"
+   :content "Request is:
+{{request}}
+
+Request Requirements:
+- Request must define language
+- Request must define CEFR level
+- Request must define grammar topic
+- Request must define number of slides
+- Request must define whether examples should be included
+  - If examples are requested but number is not specified, ask for clarification
+
+Optional Context Rule:
+- If a vocabulary topic exists in the current conversation, focus grammar explanations and examples on that vocabulary topic where relevant
+
+General Requirements:
+- Explanations must be short, simple, and classroom-friendly
+- Do NOT use linguistic jargon beyond the specified CEFR level
+- Content must be culturally neutral and suitable for PowerPoint slides
+- Grammar rules must be accurate and level-appropriate
+- Examples must strictly follow the grammar rule and be realistic classroom sentences
+
+Validation Step:
+- First check if all required fields are present
+- If anything is missing, respond ONLY with a JSON object in this exact format:
+{
+  \"requirements-not-met\": \"Please specify ...\"
+}
+
+Continue with generation ONLY if all requirements are met.
+
+Conversation Context:
+Use the current conversation to determine if a vocabulary topic already exists.
+If no prior context exists, treat this as the start of a new conversation.
+
+Current conversation:
+{{messages}}
+
+Generation Rules:
+- Grammar content must be structure-based and hierarchical
+- Focus on explaining ONE grammar concept
+- Organize content into: rule, form, usage, examples
+- Adapt content based on number of slides requested
+
+Slide Rules:
+- If number of slides = 1, include:
+  - title
+  - subtitle
+  - explanation (rule)
+  - form (positive, negative, question)
+  - usage
+  - examples (if requested)
+
+- If number of slides > 1:
+  - Slide 1: overview and rule explanation
+  - Slide 2: form (positive, negative, question)
+  - Slide 3: usage
+  - Slide 4+: examples (if requested), split logically across slides
+
+Response Format:
+Return a JSON object with this exact structure:
+
+{
+  \"title\": \"{{grammar-topic}}\",
+  \"subtitle\": \"Language: {{language}} | Level: {{level}} | Slides: {{slide-count}}\",
+  \"slides\": [
+    {
+      \"slide-title\": \"...\",
+      \"content\": {
+        \"explanation\": \"...\",
+        \"form\": {
+          \"positive\": \"...\",
+          \"negative\": \"...\",
+          \"question\": \"...\"
+        },
+        \"usage\": [
+          \"...\"
+        ],
+        \"examples\": [
+          {
+            \"sentence\": \"...\",
+            \"translation\": \"English translation if not English, otherwise a paraphrase\"
+          }
+        ]
+      }
+    }
+  ]
+}
+
+Ensure the output is valid JSON and ready for direct use in presentation generation."}]
+ :config {:model "gpt-4"
+          :temperature 0.7
+          :max-tokens 2000}}
+;; TODO pre and post processing fn if neede

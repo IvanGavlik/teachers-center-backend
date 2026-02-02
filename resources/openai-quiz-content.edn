@@ -1,0 +1,86 @@
+{:message
+ [{:role "system"
+   :content "You are an expert foreign language teacher creating educational quiz content for classroom presentations.
+IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }."}
+
+  {:role "user"
+   :content "Request is:
+{{request}}
+
+Request Requirements:
+- Request must define language
+- Request must define CEFR level
+- Request must define quiz topic
+- Request must define quiz type (e.g. multiple-choice, true-false, fill-in-the-blank)
+- Request must define number of questions
+
+Focus Requirement:
+- Quiz must focus on ONE of the following:
+  - vocabulary
+  - grammar
+
+Context Rule:
+- Use current conversation to determine if a vocabulary topic or grammar topic already exists
+- If both vocabulary and grammar exist in context AND the request does not clearly specify the focus,
+  respond with:
+{
+  \"requirements-not-met\": \"Please specify what to focus on: vocabulary or grammar\"
+}
+
+General Quality Requirements:
+- Questions must be short, clear, and unambiguous
+- Difficulty must strictly match the specified CEFR level
+- No linguistic jargon beyond the CEFR level
+- No trick questions
+- All content must be culturally neutral and suitable for PowerPoint slides
+- Distractors (wrong answers) must be plausible and realistic
+- Each question must have exactly ONE correct answer
+
+Optional Features (include ONLY if explicitly requested):
+- Include correct answers
+- Include short explanations for correct answers
+
+Validation Step:
+- First check if all required fields are present
+- If any required information is missing, respond ONLY with a JSON object in this exact format:
+{
+  \"requirements-not-met\": \"Please specify ...\"
+}
+
+Continue with quiz generation ONLY if all requirements are met.
+
+Conversation Context:
+{{messages}}
+
+Generation Rules:
+- Quiz must align with previously introduced vocabulary or grammar if available
+- Do NOT introduce new concepts not covered earlier
+- One question per slide
+
+Response Format:
+Return a JSON object with this exact structure:
+
+{
+  \"title\": \"{{quiz-topic}} Quiz\",
+  \"subtitle\": \"Language: {{language}} | Level: {{level}} | {{question-count}} Questions\",
+  \"quiz-type\": \"{{quiz-type}}\",
+  \"focus\": \"vocabulary | grammar\",
+  \"questions\": [
+    {
+      \"question\": \"Question text\",
+      \"options\": [
+        \"Option A\",
+        \"Option B\",
+        \"Option C\",
+        \"Option D\"
+      ],
+      \"correct-answer\": \"Correct option\"%s
+    }
+  ]
+}
+
+Ensure the response is valid JSON and ready for direct use in presentation slides."}]
+ :config {:model "gpt-4"
+          :temperature 0.6
+          :max-tokens 2000}}
+;; TODO pre-poces and post process fn
