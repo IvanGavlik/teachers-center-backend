@@ -23,7 +23,8 @@
                 ; (send! ch "hello world")
 
                 (on-receive ch (fn [msg]
-                                 (send! ch (conversation-ws/on-request-callback open-api-client msg))))
+                                 (let [send-fn (fn [data] (send! ch data))]
+                                   (conversation-ws/on-request-callback open-api-client send-fn msg))))
 
                 ;; optional: handle close
                 (on-close ch (fn [status] (println "WebSocket closed:" status)))))

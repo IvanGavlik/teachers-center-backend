@@ -6,6 +6,44 @@
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]))
 
+
+(def progress-messages
+  {:starting ["Getting your lesson materials ready..."
+              "Preparing your content..."
+              "Setting up your request..."
+              "Starting to work on your materials..."]
+   :thinking ["Thinking about the best way to teach this..."
+              "Crafting your lesson content..."
+              "Working on your materials..."
+              "Putting together your content..."]
+   :creating ["Creating engaging content for your students..."
+              "Building your slides..."
+              "Generating learning materials..."
+              "Designing your lesson content..."
+              "Making learning fun and effective..."
+              "Preparing classroom-ready materials..."
+              "Tailoring content to your students' level..."
+              "Crafting clear explanations and examples..."]
+   :polishing ["Adding the finishing touches..."
+               "Almost ready for your lesson..."
+               "Polishing your materials..."
+               "Finalizing your content..."
+               "Making sure everything is classroom-ready..."]
+   :complete ["Your materials are ready!"
+              "All done! Ready for review."
+              "Content created successfully!"
+              "Ready to preview your slides!"]})
+
+(defn report-progress!
+  "Report progress for a given stage. Calls the provided callback with stage message.
+   Randomly selects a message for the given stage."
+  [on-progress-fn stage]
+  (when on-progress-fn
+    (let [messages (get progress-messages stage)
+          message (rand-nth messages)]
+      (log/debug "Reporting progress:" stage message)
+      (on-progress-fn {:stage message}))))
+
 ; TODO next step redis DB
 
 ; TODO - think simple working example for implementation v1
@@ -127,8 +165,6 @@
 
 
 (defn get-conversation-template [type]
-  "Load template based on type: vocabulary, grammar, quiz, homework
-   Files: openai-vocabulary-content.edn, openai-grammar-content.edn, etc."
   (let [type-name (if (keyword? type) (name type) (str type))
         filename (str "openai-" type-name "-content.edn")
         resource (io/resource filename)]
@@ -158,35 +194,59 @@
 ;
 ; - open new conversation in chat gpt for each new conversation in url or until we are end (web socket disconects)
 ; TODO do I want to save messages or not the claude approach (for now save)
-(defn conversation [open-api-client req]
-  "request have :user-id :channel-name :conversation-id :type :content
-    :requirements just example #_{:format \"flashcards\"\n                  :length \"15-20\"\n                  :topic \"food and restaurants\"\n                  :level \"A1\"\n                  :language \"Spanish\"}"
-  ; get room or create new one - for now we only have one
-  ; get conversation or create new one
-  ; get messages - I dont need to send message to chat gpt just send him last one from the reques
+; TODO lets have open-api-client as callback fn as on-progress  - expolore other options I want here have only business logic
+(defn conversation
+  "Process a conversation request and return response data.
 
-  ; check state(GATHERING_INFO/GENERATE) and slots (tracking requirements - what is missing) - this is done by chatgpt
-  ; if missing something ask (validation), if complete generate answer
+   Parameters:
+   - open-api-client: OpenAI client for API calls
+   - req: Request map with :user-id :channel-name :conversation-id :type :content :requirements
+   - on-progress: Optional callback fn called with {:stage \"message\" :percent N} at each stage
 
-  (log/debug "req " req)
-  (let [req-type (:type req)
-        type-name (if (keyword? req-type) (name req-type) (str req-type))
-        conversation-config (get-conversation-template req-type)
-        db nil
-        current-messages (:messages (current-conversation req db))
-        _ (log/debug "current-messages" current-messages)
-        request-msg (:content req)
-        res (ask-chat-gpt open-api-client conversation-config current-messages request-msg)
-        res-content (:content (:message (first (:choices res))))
-        _ (log/debug "res-content " res-content)
-        res-data (json/parse-string res-content true)]
-      (if (:requirements-not-meet res-data)
-        (do
-          (log/debug "mark conversation as not done"))
-        (do
-          (log/debug "mark conversation as done")))
-      ;; Include type in response for frontend routing
-      (assoc res-data :type type-name)))
+   Requirements example: {:format \"flashcards\" :length \"15-20\" :topic \"food\" :level \"A1\" :language \"Spanish\"}"
+  ([open-api-client req]
+   (conversation open-api-client req nil))
+  ([open-api-client req on-progress]
+   ; get room or create new one - for now we only have one
+   ; get conversation or create new one
+   ; get messages - I dont need to send message to chat gpt just send him last one from the reques
+
+   ; check state(GATHERING_INFO/GENERATE) and slots (tracking requirements - what is missing) - this is done by chatgpt
+   ; if missing something ask (validation), if complete generate answer
+
+   (log/debug "req " req)
+
+   ;; Stage 1: Starting (10%)
+   (report-progress! on-progress :starting)
+
+   (let [req-type (:type req)
+         type-name (if (keyword? req-type) (name req-type) (str req-type))
+         conversation-config (get-conversation-template req-type)
+         db nil
+         current-messages (:messages (current-conversation req db))
+         _ (log/debug "current-messages" current-messages)
+
+         _ (report-progress! on-progress :thinking)
+
+         request-msg (:content req)
+
+         _ (report-progress! on-progress :creating)
+
+         res (ask-chat-gpt open-api-client conversation-config current-messages request-msg)
+
+         _ (report-progress! on-progress :polishing)
+
+         res-content (:content (:message (first (:choices res))))
+         _ (log/debug "res-content " res-content)
+         res-data (json/parse-string res-content true)]
+     (if (:requirements-not-meet res-data)
+       (do
+         (log/debug "mark conversation as not done"))
+       (do
+         (log/debug "mark conversation as done")))
+     ;; Include type in response for frontend routing
+     ;; Stage 5 (100%) is implicit when the final response is sent
+     (assoc res-data :type type-name))))
 
 
 (comment
