@@ -1,0 +1,27 @@
+{:message
+ [{:role "system"
+   :content "You are an expert language teacher editing a single vocabulary slide.
+IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }.
+
+Your task is to modify ONE vocabulary slide based on the teacher's edit instruction. Keep everything the teacher didn't ask to change exactly the same."}
+
+  {:role "user"
+   :content "{{request}}
+
+Return ONLY the modified slide as a JSON object with this exact structure:
+{
+  \"word\": \"the word in target language\",
+  \"definition\": \"clear definition\",
+  \"translation\": \"translation to English or synonym\",
+  \"example\": \"example sentence using the word\"
+}
+
+Rules:
+- Only change what the teacher explicitly asked to change
+- Keep all other fields exactly as they were
+- Maintain the same language and CEFR level as the original
+- Ensure the example uses the word correctly
+- Return valid JSON only"}]
+ :config {:model "gpt-4"
+          :temperature 0.5
+          :max-tokens 1000}}

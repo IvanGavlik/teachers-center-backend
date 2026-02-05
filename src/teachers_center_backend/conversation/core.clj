@@ -88,34 +88,36 @@
 ; on every disscooect/connect do i crate new room_channel_connection or new conversation
 
 (defn get-conversation [channel-name id db]
-  ; TODO full implementation when I have db filter by channel name
-  {:conversation-id id
-   :user "user-123"
-   :type "generate vocabulary"
-   :messages [{:message-id 1
-               :user "user-123"
-               :content "I need a vocabulary list for my Spanish A1 class about food and restaurants"}
-              {:message-id 2
-               :user "chat-gpt"
-               :content "I'd be happy to help! What format would you like the vocabulary list in?"}
-              {:message-id 3
-               :user "user-123"
-               :content "I need it as flashcards with Spanish word, English translation, and example sentences"}
-              {:message-id 4
-               :user "chat-gpt"
-               :content "Perfect! How many vocabulary items would you like?"}
-              {:message-id 5
-               :user "user-123"
-               :content "Around 15-20 words please"}
-              {:message-id 6
-               :user "chat-gpt"
-               :content "Great! Here's your vocabulary list with 18 food and restaurant-related words..."}]
-   :state "completed"
-   :requirements {:format "flashcards"
-                  :length "15-20"
-                  :topic "food and restaurants"
-                  :level "A1"
-                  :language "Spanish"}})
+  ;; TODO full implementation when I have db filter by channel name
+  ;; For now return nil to create fresh conversation each time
+  nil
+  #_{:conversation-id id
+     :user "user-123"
+     :type "generate vocabulary"
+     :messages [{:message-id 1
+                 :user "user-123"
+                 :content "I need a vocabulary list for my Spanish A1 class about food and restaurants"}
+                {:message-id 2
+                 :user "chat-gpt"
+                 :content "I'd be happy to help! What format would you like the vocabulary list in?"}
+                {:message-id 3
+                 :user "user-123"
+                 :content "I need it as flashcards with Spanish word, English translation, and example sentences"}
+                {:message-id 4
+                 :user "chat-gpt"
+                 :content "Perfect! How many vocabulary items would you like?"}
+                {:message-id 5
+                 :user "user-123"
+                 :content "Around 15-20 words please"}
+                {:message-id 6
+                 :user "chat-gpt"
+                 :content "Great! Here's your vocabulary list with 18 food and restaurant-related words..."}]
+     :state "completed"
+     :requirements {:format "flashcards"
+                    :length "15-20"
+                    :topic "food and restaurants"
+                    :level "A1"
+                    :language "Spanish"}})
 
 (defn create-empty-conversation [user-id type requirements]
   {:conversation-id (rand-int 100000)
@@ -129,39 +131,41 @@
                   :level "A1"
                   :language "Spanish"}})
 
-(defn create-conversation [user-id]
-  {:conversation-id 1
-   :user user-id
-   :type "generate vocabulary"
-   :messages [{:message-id 1
-               :user "user-123"
-               :content "I need a vocabulary list for my Spanish A1 class about food and restaurants"}
-              {:message-id 2
-               :user "chat-gpt"
-               :content "I'd be happy to help! What format would you like the vocabulary list in?"}
-              {:message-id 3
-               :user "user-123"
-               :content "I need it as flashcards with Spanish word, English translation, and example sentences"}
-              {:message-id 4
-               :user "chat-gpt"
-               :content "Perfect! How many vocabulary items would you like?"}
-              {:message-id 5
-               :user "user-123"
-               :content "Around 15-20 words please"}
-              {:message-id 6
-               :user "chat-gpt"
-               :content "Great! Here's your vocabulary list with 18 food and restaurant-related words..."}]
-   :state "completed"
-   :requirements {:format "flashcards"
-                  :length "15-20"
-                  :topic "food and restaurants"
-                  :level "A1"
-                  :language "Spanish"}})
+;; TODO: Implement when DB is ready
+#_(defn create-conversation [user-id]
+    {:conversation-id 1
+     :user user-id
+     :type "generate vocabulary"
+     :messages [{:message-id 1
+                 :user "user-123"
+                 :content "I need a vocabulary list for my Spanish A1 class about food and restaurants"}
+                {:message-id 2
+                 :user "chat-gpt"
+                 :content "I'd be happy to help! What format would you like the vocabulary list in?"}
+                {:message-id 3
+                 :user "user-123"
+                 :content "I need it as flashcards with Spanish word, English translation, and example sentences"}
+                {:message-id 4
+                 :user "chat-gpt"
+                 :content "Perfect! How many vocabulary items would you like?"}
+                {:message-id 5
+                 :user "user-123"
+                 :content "Around 15-20 words please"}
+                {:message-id 6
+                 :user "chat-gpt"
+                 :content "Great! Here's your vocabulary list with 18 food and restaurant-related words..."}]
+     :state "completed"
+     :requirements {:format "flashcards"
+                    :length "15-20"
+                    :topic "food and restaurants"
+                    :level "A1"
+                    :language "Spanish"}})
 
 (defn current-conversation [req db]
-  (if (seq (:conversation-id req))                          ; TODO do I have to merge for DB and req (if both exist)
-    (get-conversation (:channel-name req) (:conversation-id req) db)
-    (create-empty-conversation (:user-id req) (:type req) (:requirements req))))
+  ;; Try to get existing conversation, fall back to empty if not found (or DB not implemented)
+  (or (when (seq (:conversation-id req))
+        (get-conversation (:channel-name req) (:conversation-id req) db))
+      (create-empty-conversation (:user-id req) (:type req) (:requirements req))))
 
 
 (defn get-conversation-template [type]
@@ -186,6 +190,50 @@
   )
 
 
+(defn edit-slide
+  "Edit a single slide based on user instruction.
+
+   Parameters:
+   - open-api-client: OpenAI client for API calls
+   - req: Request map with :edit containing {:slideIndex :currentSlide :originalRequest :originalType}
+   - on-progress: Optional callback fn
+
+   Returns: {:type \"edit\" :edit {:slideIndex N :slide {...}}}"
+  [open-api-client req on-progress]
+  (report-progress! on-progress :starting)
+
+  (let [edit-data (:edit req)
+        slide-index (:slideIndex edit-data)
+        current-slide (:currentSlide edit-data)
+        original-request (:originalRequest edit-data)
+        original-type (:originalType edit-data)
+
+        ;; Build combined request string with all context
+        combined-request (str "ORIGINAL REQUEST: " original-request "\n\n"
+                              "CURRENT SLIDE DATA: " (json/generate-string current-slide) "\n\n"
+                              "EDIT INSTRUCTION: " (:content req))
+
+        ;; Load per-type edit template (e.g., :edit-vocabulary)
+        edit-template-type (keyword (str "edit-" original-type))
+        conversation-config (get-conversation-template edit-template-type)
+
+        _ (report-progress! on-progress :thinking)
+        _ (report-progress! on-progress :creating)
+
+        ;; Call GPT with combined request (empty messages since context is in request)
+        res (ask-chat-gpt open-api-client conversation-config [] combined-request)
+
+        _ (report-progress! on-progress :polishing)
+
+        res-content (:content (:message (first (:choices res))))
+        _ (log/debug "edit-slide response:" res-content)
+        res-data (json/parse-string res-content true)]
+
+    ;; Wrap response in edit format
+    {:type "edit"
+     :edit {:slideIndex slide-index
+            :slide res-data}}))
+
 ; TODO NEXT WRITE FEW tests for few conversations to see how this will work
 ; explore ask more info, see preview, final answer (also the starting new conversation)
 
@@ -207,19 +255,25 @@
   ([open-api-client req]
    (conversation open-api-client req nil))
   ([open-api-client req on-progress]
-   ; get room or create new one - for now we only have one
-   ; get conversation or create new one
-   ; get messages - I dont need to send message to chat gpt just send him last one from the reques
+   ;; Route edit requests to edit-slide function
+   (if (= :edit (:type req))
+     (edit-slide open-api-client req on-progress)
 
-   ; check state(GATHERING_INFO/GENERATE) and slots (tracking requirements - what is missing) - this is done by chatgpt
-   ; if missing something ask (validation), if complete generate answer
+     ;; Normal generation flow
+     (do
+       ; get room or create new one - for now we only have one
+       ; get conversation or create new one
+       ; get messages - I dont need to send message to chat gpt just send him last one from the reques
 
-   (log/debug "req " req)
+       ; check state(GATHERING_INFO/GENERATE) and slots (tracking requirements - what is missing) - this is done by chatgpt
+       ; if missing something ask (validation), if complete generate answer
 
-   ;; Stage 1: Starting (10%)
-   (report-progress! on-progress :starting)
+       (log/debug "req " req)
 
-   (let [req-type (:type req)
+       ;; Stage 1: Starting (10%)
+       (report-progress! on-progress :starting)
+
+       (let [req-type (:type req)
          type-name (if (keyword? req-type) (name req-type) (str req-type))
          conversation-config (get-conversation-template req-type)
          db nil
@@ -246,7 +300,7 @@
          (log/debug "mark conversation as done")))
      ;; Include type in response for frontend routing
      ;; Stage 5 (100%) is implicit when the final response is sent
-     (assoc res-data :type type-name))))
+     (assoc res-data :type type-name))))))
 
 
 (comment
