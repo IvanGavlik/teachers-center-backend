@@ -1,6 +1,6 @@
 {:message
  [{:role "system"
-   :content "You are an expert foreign language teacher creating educational quiz content for classroom presentations.
+   :content "You are an expert {{language}} language teacher creating educational quiz content for {{level}} level students aged {{age-group}} for classroom presentations.
 IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }."}
 
   {:role "user"
@@ -8,11 +8,15 @@ IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explan
 {{request}}
 
 Request Requirements:
-- Request must define language
-- Request must define CEFR level
 - Request must define quiz topic
 - Request must define quiz type (e.g. multiple-choice, true-false, fill-in-the-blank)
 - Request must define number of questions
+
+Class Settings (provided by teacher's configuration):
+- Language: {{language}}
+- CEFR Level: {{level}}
+- Student Age Range: {{age-group}}
+All generated content must be in {{language}} and appropriate for {{level}} level students aged {{age-group}}.
 
 Focus Requirement:
 - Quiz must focus on ONE of the following:

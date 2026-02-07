@@ -180,10 +180,11 @@
             slurp
             edn/read-string)))))
 
-(defn ask-chat-gpt [openapi-client conversation-config current-messages request-msg]
+(defn ask-chat-gpt [openapi-client conversation-config current-messages request-msg settings]
   (let [msg-template (:message conversation-config)
-        message (content/render-content msg-template {:request request-msg
-                                                      :messages current-messages})
+        message (content/render-content msg-template (merge settings
+                                                          {:request request-msg
+                                                           :messages current-messages}))
         _ (prn "message for chat gpt " message)
         config (:config conversation-config)]
     (openai/chat-completion openapi-client message config))
@@ -221,7 +222,8 @@
         _ (report-progress! on-progress :creating)
 
         ;; Call GPT with combined request (empty messages since context is in request)
-        res (ask-chat-gpt open-api-client conversation-config [] combined-request)
+        settings (:requirements req)
+        res (ask-chat-gpt open-api-client conversation-config [] combined-request settings)
 
         _ (report-progress! on-progress :polishing)
 
@@ -286,14 +288,15 @@
 
          _ (report-progress! on-progress :creating)
 
-         res (ask-chat-gpt open-api-client conversation-config current-messages request-msg)
+         settings (:requirements req)
+         res (ask-chat-gpt open-api-client conversation-config current-messages request-msg settings)
 
          _ (report-progress! on-progress :polishing)
 
          res-content (:content (:message (first (:choices res))))
          _ (log/debug "res-content " res-content)
          res-data (json/parse-string res-content true)]
-     (if (:requirements-not-meet res-data)
+     (if (:requirements-not-met res-data)
        (do
          (log/debug "mark conversation as not done"))
        (do

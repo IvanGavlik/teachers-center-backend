@@ -1,6 +1,6 @@
 {:message
  [{:role "system"
-   :content "You are an expert foreign language teacher creating educational homework content for students.
+   :content "You are an expert {{language}} language teacher creating educational homework content for {{level}} level students aged {{age-group}}.
 IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }."}
 
   {:role "user"
@@ -8,13 +8,17 @@ IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explan
 {{request}}
 
 Request Requirements:
-- Request must define language
-- Request must define CEFR level
 - Request must define homework type (e.g. fill-in-the-blank, sentence transformation, matching)
 - Request must define number of tasks
 - Request must define homework focus:
   - vocabulary
   - grammar
+
+Class Settings (provided by teacher's configuration):
+- Language: {{language}}
+- CEFR Level: {{level}}
+- Student Age Range: {{age-group}}
+All generated content must be in {{language}} and appropriate for {{level}} level students aged {{age-group}}.
 
 Context Rule:
 - Use the current conversation to determine whether vocabulary and/or grammar topics already exist
