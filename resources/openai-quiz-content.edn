@@ -78,7 +78,7 @@ Return a JSON object with this exact structure:
         \"Option C\",
         \"Option D\"
       ],
-      \"correct-answer\": \"Correct option\"%s
+      \"correct-answer\": \"Correct option\"
     }
   ]
 }

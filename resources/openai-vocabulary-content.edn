@@ -40,15 +40,20 @@ Generate content as teacher asked for based on the request requirements and curr
 Ensure all content is educationally appropriate and culturally neutral
 Focus on commonly used, practical vocabulary
 
+If native-language is set to No, do not include a translation field in the response.
+If native-language is set to a language, include a translation field with the translation to that language.
+Native language setting: {{native-language}}
+
 Format the response as a JSON object with this exact structure:
 {
-  \"title\": \"{{topic}} Vocabulary\",
-  \"subtitle\": \"Level: {{level}} | {{word-count}} words | %s\",
+  \"title\": \"topic Vocabulary\",
+  \"subtitle\": \"Level: {{level}} | number of words\",
   \"words\": [
     {
       \"word\": \"word in {{language}}\",
       \"definition\": \"clear definition appropriate for {{level}} level\",
-      \"translation\": \"translation to English if not English, or synonym if English\"%s
+      \"translation\": \"translation to native language if set, omit if native-language is No\",
+      \"example\": \"example sentence using the word in {{language}}\"
     }
   ]
 }"}]

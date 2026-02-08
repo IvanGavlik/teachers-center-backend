@@ -74,7 +74,7 @@ Return a JSON object with this exact structure:
       \"items\": [
         \"Task item 1\",
         \"Task item 2\"
-      ]%s
+      ]
     }
   ]
 }

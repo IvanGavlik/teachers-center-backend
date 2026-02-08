@@ -8,6 +8,10 @@ Your task is to modify ONE grammar slide based on the teacher's edit instruction
   {:role "user"
    :content "{{request}}
 
+Native language setting: {{native-language}}
+If native-language is set to No, use a simple paraphrase for translations.
+If native-language is set to a language, translate to that language.
+
 Return ONLY the modified slide as a JSON object with this exact structure:
 {
   \"slide-title\": \"title of this grammar slide\",
@@ -25,7 +29,7 @@ Return ONLY the modified slide as a JSON object with this exact structure:
     \"examples\": [
       {
         \"sentence\": \"example sentence\",
-        \"translation\": \"English translation\"
+        \"translation\": \"translation to native language if set, otherwise a paraphrase\"
       }
     ]
   }

@@ -8,11 +8,15 @@ Your task is to modify ONE vocabulary slide based on the teacher's edit instruct
   {:role "user"
    :content "{{request}}
 
+If native-language is set to No, do not include a translation field.
+If native-language is set to a language, include a translation to that language.
+Native language setting: {{native-language}}
+
 Return ONLY the modified slide as a JSON object with this exact structure:
 {
   \"word\": \"the word in target language\",
   \"definition\": \"clear definition\",
-  \"translation\": \"translation to English or synonym\",
+  \"translation\": \"translation to native language if set, omit if No\",
   \"example\": \"example sentence using the word\"
 }
 

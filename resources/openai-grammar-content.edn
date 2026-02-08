@@ -66,12 +66,16 @@ Slide Rules:
   - Slide 3: usage
   - Slide 4+: examples (if requested), split logically across slides
 
+Native language setting: {{native-language}}
+If native-language is set to No, use a simple paraphrase for the translation field.
+If native-language is set to a language, translate examples to that language.
+
 Response Format:
 Return a JSON object with this exact structure:
 
 {
-  \"title\": \"{{grammar-topic}}\",
-  \"subtitle\": \"Language: {{language}} | Level: {{level}} | Slides: {{slide-count}}\",
+  \"title\": \"grammar topic\",
+  \"subtitle\": \"Language: {{language}} | Level: {{level}} | number of slides\",
   \"slides\": [
     {
       \"slide-title\": \"...\",
@@ -88,7 +92,7 @@ Return a JSON object with this exact structure:
         \"examples\": [
           {
             \"sentence\": \"...\",
-            \"translation\": \"English translation if not English, otherwise a paraphrase\"
+            \"translation\": \"translation to native language if set, otherwise a paraphrase\"
           }
         ]
       }
