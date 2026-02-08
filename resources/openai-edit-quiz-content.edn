@@ -1,13 +1,23 @@
 {:message
  [{:role "system"
-   :content "You are an expert language teacher editing a single quiz question.
+   :content "You are an expert language teacher editing a single quiz question for a classroom presentation.
 IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }.
 
-Your task is to modify ONE quiz question based on the teacher's edit instruction. Keep everything the teacher didn't ask to change exactly the same."}
+Your task is to modify ONE quiz question based on the teacher's edit instruction. Keep everything the teacher didn't ask to change exactly the same.
+
+You are editing educational material. Before making any change, understand what the quiz is testing from the ORIGINAL REQUEST. Every modification — whether changing difficulty, rewording, or adding options — must ensure the question still clearly tests that specific knowledge."}
 
   {:role "user"
    :content "{{request}}
 
+Formatting Style:
+The content will be displayed on presentation slides. Write for scannability.
+- Questions: one clear sentence or short prompt — easy to read at a glance
+- Options: short and parallel in structure — similar length, same grammatical pattern
+- Use symbols where helpful: blanks (___) for fill-in, arrows (→) for transformations
+- Make the content easy to read from the back of a classroom
+
+IMPORTANT: Always return a single question object. Never group or nest questions.
 Return ONLY the modified question as a JSON object with this exact structure:
 {
   \"question\": \"the quiz question\",
@@ -16,17 +26,17 @@ Return ONLY the modified question as a JSON object with this exact structure:
     \"Option B\",
     \"Option C\",
     \"Option D\"
-  ],
-  \"correct-answer\": \"the correct option text\"
+  ]
 }
 
 Rules:
 - Only change what the teacher explicitly asked to change
 - Keep all other fields exactly as they were
 - Maintain the same language and CEFR level as the original
-- Ensure there is exactly ONE correct answer
 - Distractors should be plausible but clearly wrong
-- Return valid JSON only"}]
+- The question must test the specific knowledge from the ORIGINAL REQUEST — not just general language ability
+- Do NOT include correct-answer in the response
+- Return valid JSON only — a single flat question object, never nested or grouped"}]
  :config {:model "gpt-4"
           :temperature 0.5
           :max-tokens 1000}}

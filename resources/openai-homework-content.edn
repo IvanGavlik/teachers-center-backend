@@ -38,18 +38,24 @@ General Quality Requirements:
 - Tasks must be realistically completable in 10–20 minutes
 - All tasks should have one clear expected answer unless explicitly stated otherwise
 
+Formatting Style:
+The content will be displayed on presentation slides or printed worksheets. Write for scannability.
+- Instructions: one clear sentence explaining what to do
+- Items: short, parallel in structure, easy to scan
+- Use symbols where helpful: blanks (___) for fill-in, arrows (→) for transformations, bullet points (🔹) for lists
+- Number items clearly
+- Make the content easy to read at a glance
+
 Optional Features (include ONLY if explicitly requested):
 - Include correct answers
 - Include short answer explanations
 
-Validation Step:
-- First check if all required fields are present
-- If any required information is missing, respond ONLY with a JSON object in this exact format:
+STRICT Validation — do NOT skip this step, do NOT assume or infer missing information:
+Check the request against each requirement listed above. If the teacher did NOT explicitly mention any of these, you MUST respond ONLY with:
 {
-  \"requirements-not-met\": \"Please specify ...\"
+  \"requirements-not-met\": \"your message asking the teacher to specify what is missing\"
 }
-
-Continue with generation ONLY if all requirements are met.
+Do NOT guess defaults. Do NOT generate content if any requirement is missing. Ask the teacher to clarify.
 
 Conversation Context:
 {{messages}}
@@ -64,10 +70,10 @@ Response Format:
 Return a JSON object with this exact structure:
 
 {
-  \"title\": \"Homework: {{homework-focus}}\",
-  \"subtitle\": \"Language: {{language}} | Level: {{level}} | {{task-count}} Tasks\",
+  \"title\": \"Homework: focus topic\",
+  \"subtitle\": \"Language: {{language}} | Level: {{level}} | number of tasks\",
   \"focus\": \"vocabulary | grammar\",
-  \"homework-type\": \"{{homework-type}}\",
+  \"homework-type\": \"fill-in-the-blank or other type\",
   \"tasks\": [
     {
       \"instruction\": \"Clear instruction for the task\",
@@ -76,6 +82,25 @@ Return a JSON object with this exact structure:
         \"Task item 2\"
       ]
     }
+  ]
+}
+
+Example task for a fill-in-the-blank homework:
+{
+  \"instruction\": \"Fill in the blank with the correct word from the vocabulary list.\",
+  \"items\": [
+    \"We need to find ___ for our trip to London. (accommodation)\",
+    \"Don't forget to pack your ___ before the flight. (passport)\",
+    \"I bought a ___ to remember our holiday. (souvenir)\"
+  ]
+}
+
+Example task for a sentence transformation homework:
+{
+  \"instruction\": \"Rewrite the sentence using the word in brackets.\",
+  \"items\": [
+    \"I decided to visit Paris next summer. → (going to)\",
+    \"I think the weather will be nice tomorrow. → (will)\"
   ]
 }
 

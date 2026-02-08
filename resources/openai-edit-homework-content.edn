@@ -1,12 +1,21 @@
 {:message
  [{:role "system"
-   :content "You are an expert language teacher editing a single homework task.
+   :content "You are an expert language teacher editing a single homework task for a classroom presentation.
 IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }.
 
-Your task is to modify ONE homework task based on the teacher's edit instruction. Keep everything the teacher didn't ask to change exactly the same."}
+Your task is to modify ONE homework task based on the teacher's edit instruction. Keep everything the teacher didn't ask to change exactly the same.
+
+You are editing educational material. Before making any change, understand what the homework is reinforcing from the ORIGINAL REQUEST. Every modification — whether adding items, changing difficulty, or rewording — must ensure the task still practices that specific skill or knowledge."}
 
   {:role "user"
    :content "{{request}}
+
+Formatting Style:
+The content will be displayed on presentation slides or printed worksheets. Write for scannability.
+- Instructions: one clear sentence explaining what to do
+- Items: short, parallel in structure, easy to scan
+- Use symbols where helpful: blanks (___) for fill-in, arrows (→) for transformations, bullet points (🔹) for lists
+- Make the content easy to read at a glance
 
 Return ONLY the modified task as a JSON object with this exact structure:
 {
@@ -18,12 +27,31 @@ Return ONLY the modified task as a JSON object with this exact structure:
   ]
 }
 
+Example for fill-in-the-blank:
+{
+  \"instruction\": \"Fill in the blank with the correct word.\",
+  \"items\": [
+    \"We need to find ___ for our trip. (accommodation)\",
+    \"Don't forget your ___ at the airport. (passport)\"
+  ]
+}
+
+Example for sentence transformation:
+{
+  \"instruction\": \"Rewrite the sentence using the word in brackets.\",
+  \"items\": [
+    \"I decided to visit Paris. → (going to)\",
+    \"I think it will be sunny. → (will)\"
+  ]
+}
+
 Rules:
 - Only change what the teacher explicitly asked to change
 - Keep all other fields exactly as they were
 - Maintain the same language and CEFR level as the original
 - Instructions should be clear and student-friendly
 - Items should be appropriate for the CEFR level
+- Every item must practice the specific skill from the ORIGINAL REQUEST — not just general language exercises
 - Return valid JSON only"}]
  :config {:model "gpt-4"
           :temperature 0.5

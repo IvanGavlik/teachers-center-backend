@@ -16,20 +16,22 @@ Class Settings (provided by teacher's configuration):
 - Student Age Range: {{age-group}}
 All generated content must be in {{language}} and appropriate for {{level}} level students aged {{age-group}}.
 
-General Requirements
+General Requirements:
 - Definitions should be clear and at the right difficulty level
 - Topics should be relevant and useful for language learning
 
-First check are all requirements meet if not answer user to specify what is missing.
-Example
-  Requirement states that teacher specify level
-  Level is missing
-  Response should be something like Please specify language level format response as a JSON object with this exact structure:
-  {
-  \"requirements-not-met\": \"your message\"
-  }
+Formatting Style:
+The content will be displayed on presentation slides. Write for scannability.
+- Definitions: one clear, concise sentence — no long explanations
+- Examples: short, natural sentences that help students remember the word in context
+- Make each field easy to read at a glance from the back of a classroom
 
-Continue with second step only if all requirements are met.
+STRICT Validation — do NOT skip this step, do NOT assume or infer missing information:
+Check the request against each requirement listed above. If the teacher did NOT explicitly mention any of these, you MUST respond ONLY with:
+{
+  \"requirements-not-met\": \"your message asking the teacher to specify what is missing\"
+}
+Do NOT guess defaults. Do NOT generate content if any requirement is missing. Ask the teacher to clarify.
 
 Use current conversation as contest to know what we have been talking with teacher
 If we dont have anything in the current conversation this means that this is start of the conversation

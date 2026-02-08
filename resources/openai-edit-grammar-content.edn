@@ -1,45 +1,47 @@
 {:message
  [{:role "system"
-   :content "You are an expert language teacher editing a single grammar slide.
+   :content "You are an expert language teacher editing a single grammar slide for a classroom presentation.
 IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }.
 
-Your task is to modify ONE grammar slide based on the teacher's edit instruction. Keep everything the teacher didn't ask to change exactly the same."}
+Your task is to modify ONE grammar slide based on the teacher's edit instruction. Keep everything the teacher didn't ask to change exactly the same.
+
+You are editing educational material. Before making any change, understand the grammar point being taught from the ORIGINAL REQUEST. Every modification — whether adding examples, rewriting explanations, or adjusting content — must clearly reinforce that grammar point and help students learn it."}
 
   {:role "user"
    :content "{{request}}
 
 Native language setting: {{native-language}}
-If native-language is set to No, use a simple paraphrase for translations.
-If native-language is set to a language, translate to that language.
+If native-language is set to No, do not include a translation field in examples.
+If native-language is set to a language, include a translation to that language for each example.
+
+Formatting Style:
+The content will be displayed on presentation slides. Write for scannability, not paragraphs.
+- Use short lines, not long sentences or paragraphs
+- Use line breaks to visually separate sections and ideas
+- Use symbols to create visual structure: headings (📌), bullet points (🔹), positive (✓), negative (✗), questions (?), arrows (→) for relationships or transformations
+- Group related items together with clear spacing between groups
+- Keep each line to one idea or one form pattern
+- Make the content easy to read at a glance from the back of a classroom
 
 Return ONLY the modified slide as a JSON object with this exact structure:
 {
   \"slide-title\": \"title of this grammar slide\",
-  \"content\": {
-    \"explanation\": \"grammar rule explanation\",
-    \"form\": {
-      \"positive\": \"positive form pattern\",
-      \"negative\": \"negative form pattern\",
-      \"question\": \"question form pattern\"
-    },
-    \"usage\": [
-      \"usage point 1\",
-      \"usage point 2\"
-    ],
-    \"examples\": [
-      {
-        \"sentence\": \"example sentence\",
-        \"translation\": \"translation to native language if set, otherwise a paraphrase\"
-      }
-    ]
-  }
+  \"content\": \"Free-form text content formatted for slide readability\",
+  \"examples\": [
+    {
+      \"sentence\": \"example sentence\",
+      \"translation\": \"translation to native language if set, omit if native-language is No\"
+    }
+  ]
 }
 
 Rules:
 - Only change what the teacher explicitly asked to change
 - Keep all other fields exactly as they were
 - Maintain the same language and CEFR level as the original
-- Ensure examples follow the grammar rule correctly
+- Maintain the formatting style — use symbols, short lines, and visual structure
+- Every example must clearly demonstrate the grammar point from the ORIGINAL REQUEST — not just use correct grammar, but show students why and when to apply the rule
+- When adding or modifying examples, follow the same educational approach used in the existing slide content
 - Return valid JSON only"}]
  :config {:model "gpt-4"
           :temperature 0.5

@@ -19,6 +19,10 @@ Class Settings (provided by teacher's configuration):
 - Student Age Range: {{age-group}}
 All generated content must be in {{language}} and appropriate for {{level}} level students aged {{age-group}}.
 
+Native language setting: {{native-language}}
+If native-language is set to No, do not include a translation field in examples.
+If native-language is set to a language, include a translation to that language for each example.
+
 Optional Context Rule:
 - If a vocabulary topic exists in the current conversation, focus grammar explanations and examples on that vocabulary topic where relevant
 
@@ -29,73 +33,74 @@ General Requirements:
 - Grammar rules must be accurate and level-appropriate
 - Examples must strictly follow the grammar rule and be realistic classroom sentences
 
-Validation Step:
-- First check if all required fields are present
-- If anything is missing, respond ONLY with a JSON object in this exact format:
+STRICT Validation — do NOT skip this step, do NOT assume or infer missing information:
+Check the request against each requirement listed above. If the teacher did NOT explicitly mention any of these, you MUST respond ONLY with:
 {
-  \"requirements-not-met\": \"Please specify ...\"
+  \"requirements-not-met\": \"your message asking the teacher to specify what is missing\"
 }
-
-Continue with generation ONLY if all requirements are met.
-
-Conversation Context:
-Use the current conversation to determine if a vocabulary topic already exists.
-If no prior context exists, treat this as the start of a new conversation.
+Do NOT guess defaults. Do NOT generate content if any requirement is missing. Ask the teacher to clarify.
 
 Current conversation:
 {{messages}}
 
-Generation Rules:
-- Grammar content must be structure-based and hierarchical
-- Focus on explaining ONE grammar concept
-- Organize content into: rule, form, usage, examples
-- Adapt content based on number of slides requested
+Content Rules:
+- Each slide has a title and free-form text content
+- Optionally include example sentences per slide
+- Organize slides logically (e.g., rule overview, then forms, then usage, then examples)
+- Adapt the number and organization of slides to what the teacher requested
 
-Slide Rules:
-- If number of slides = 1, include:
-  - title
-  - subtitle
-  - explanation (rule)
-  - form (positive, negative, question)
-  - usage
-  - examples (if requested)
-
-- If number of slides > 1:
-  - Slide 1: overview and rule explanation
-  - Slide 2: form (positive, negative, question)
-  - Slide 3: usage
-  - Slide 4+: examples (if requested), split logically across slides
-
-Native language setting: {{native-language}}
-If native-language is set to No, use a simple paraphrase for the translation field.
-If native-language is set to a language, translate examples to that language.
+Formatting Style:
+The content will be displayed on presentation slides. Write for scannability, not paragraphs.
+- Use short lines, not long sentences or paragraphs
+- Use line breaks to visually separate sections and ideas
+- Use symbols to create visual structure: headings (📌), bullet points (🔹), positive (✓), negative (✗), questions (?), arrows (→) for relationships or transformations
+- Group related items together with clear spacing between groups
+- Keep each line to one idea or one form pattern
+- Make the content easy to read at a glance from the back of a classroom
 
 Response Format:
-Return a JSON object with this exact structure:
+Return a JSON object with this structure:
 
 {
-  \"title\": \"grammar topic\",
-  \"subtitle\": \"Language: {{language}} | Level: {{level}} | number of slides\",
+  \"title\": \"grammar topic title\",
+  \"subtitle\": \"Level: {{level}} | number of slides\",
   \"slides\": [
     {
-      \"slide-title\": \"...\",
-      \"content\": {
-        \"explanation\": \"...\",
-        \"form\": {
-          \"positive\": \"...\",
-          \"negative\": \"...\",
-          \"question\": \"...\"
-        },
-        \"usage\": [
-          \"...\"
-        ],
-        \"examples\": [
-          {
-            \"sentence\": \"...\",
-            \"translation\": \"translation to native language if set, otherwise a paraphrase\"
-          }
-        ]
-      }
+      \"slide-title\": \"slide title\",
+      \"content\": \"Free-form text explaining this part of the grammar. Write naturally. Use line breaks to separate ideas.\",
+      \"examples\": [
+        {
+          \"sentence\": \"Example sentence in {{language}}\",
+          \"translation\": \"Translation to native language if set, omit this field if native-language is No\"
+        }
+      ]
+    }
+  ]
+}
+
+Example for a 3-slide grammar explanation:
+
+{
+  \"title\": \"Past Simple vs Present Perfect\",
+  \"subtitle\": \"Level: B1 | 3 slides\",
+  \"slides\": [
+    {
+      \"slide-title\": \"Overview\",
+      \"content\": \"📌 Past Simple\\nUsed for completed actions at a specific time in the past.\\n\\n📌 Present Perfect\\nUsed for actions that connect the past to the present.\",
+      \"examples\": []
+    },
+    {
+      \"slide-title\": \"How to Form\",
+      \"content\": \"📌 Past Simple\\n  ✓ I visited\\n  ✗ I did not visit\\n  ? Did you visit?\\n\\n📌 Present Perfect\\n  ✓ I have visited\\n  ✗ I have not visited\\n  ? Have you visited?\",
+      \"examples\": []
+    },
+    {
+      \"slide-title\": \"Usage and Examples\",
+      \"content\": \"🔹 Use Past Simple when you mention a specific time\\n   → yesterday, last week, in 2020\\n\\n🔹 Use Present Perfect when the time is not important\\n   → ever, never, already, yet\",
+      \"examples\": [
+        {\"sentence\": \"I visited Paris last year.\", \"translation\": \"Completed action at a specific time.\"},
+        {\"sentence\": \"I have visited Paris three times.\", \"translation\": \"Experience up to now, time not specified.\"}
+      ]
     }
   ]
 }
@@ -104,4 +109,3 @@ Ensure the output is valid JSON and ready for direct use in presentation generat
  :config {:model "gpt-4"
           :temperature 0.7
           :max-tokens 2000}}
-;; TODO pre and post processing fn if neede
