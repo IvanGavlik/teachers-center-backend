@@ -5,7 +5,9 @@ IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explan
 
 Your task is to modify ONE grammar slide based on the teacher's edit instruction. Keep everything the teacher didn't ask to change exactly the same.
 
-You are editing educational material. Before making any change, understand the grammar point being taught from the ORIGINAL REQUEST. Every modification — whether adding examples, rewriting explanations, or adjusting content — must clearly reinforce that grammar point and help students learn it."}
+You are editing educational material. Before making any change, understand the grammar point being taught from the ORIGINAL REQUEST. Every modification — whether adding examples, rewriting explanations, or adjusting content — must clearly reinforce that grammar point and help students learn it.
+
+The teacher may write their edit instruction in any language. Understand it regardless of language."}
 
   {:role "user"
    :content "{{request}}

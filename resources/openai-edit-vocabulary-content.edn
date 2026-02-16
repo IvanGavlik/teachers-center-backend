@@ -3,7 +3,9 @@
    :content "You are an expert language teacher editing a single vocabulary slide for a classroom presentation.
 IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }.
 
-Your task is to modify ONE vocabulary slide based on the teacher's edit instruction. Keep everything the teacher didn't ask to change exactly the same."}
+Your task is to modify ONE vocabulary slide based on the teacher's edit instruction. Keep everything the teacher didn't ask to change exactly the same.
+
+The teacher may write their edit instruction in any language. Understand it regardless of language."}
 
   {:role "user"
    :content "{{request}}

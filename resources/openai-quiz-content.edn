@@ -21,6 +21,12 @@ Class Settings (provided by teacher's configuration):
 - Student Age Range: {{age-group}}
 All generated content must be in {{language}} and appropriate for {{level}} level students aged {{age-group}}.
 
+Teacher Input Language:
+The teacher may write their request in any language (not necessarily {{language}}).
+- Understand the request regardless of what language it is written in
+- If you need to respond with a \"requirements-not-met\" message, write it in the SAME language the teacher used in their request
+- Generated educational content must always be in {{language}} as specified above
+
 Focus Requirement:
 - Quiz must focus on ONE of the following:
   - vocabulary

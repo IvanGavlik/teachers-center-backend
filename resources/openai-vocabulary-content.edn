@@ -16,6 +16,12 @@ Class Settings (provided by teacher's configuration):
 - Student Age Range: {{age-group}}
 All generated content must be in {{language}} and appropriate for {{level}} level students aged {{age-group}}.
 
+Teacher Input Language:
+The teacher may write their request in any language (not necessarily {{language}}).
+- Understand the request regardless of what language it is written in
+- If you need to respond with a \"requirements-not-met\" message, write it in the SAME language the teacher used in their request
+- Generated educational content must always be in {{language}} as specified above
+
 General Requirements:
 - Definitions should be clear and at the right difficulty level
 - Topics should be relevant and useful for language learning
