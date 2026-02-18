@@ -169,7 +169,10 @@
 
 
 (defn get-conversation-template [type]
-  (let [type-name (if (keyword? type) (name type) (str type))
+  (-> (io/resource "conversation-content.edn")
+      slurp
+      edn/read-string)
+  #_(let [type-name (if (keyword? type) (name type) (str type))
         filename (str "openai-" type-name "-content.edn")
         resource (io/resource filename)]
     (if resource
