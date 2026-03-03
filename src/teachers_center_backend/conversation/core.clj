@@ -183,15 +183,19 @@
             slurp
             edn/read-string)))))
 
-(defn ask-chat-gpt [openapi-client conversation-config current-messages request-msg settings]
+(defn ask-chat-gpt [openapi-client conversation-config history-messages request-msg settings]
   (let [msg-template (:message conversation-config)
-        message (content/render-content msg-template (merge settings
-                                                          {:request request-msg
-                                                           :messages current-messages}))
-        _ (prn "message for chat gpt " message)
+        rendered     (content/render-content msg-template (merge settings {:request request-msg}))
+        system-msg   (first rendered)
+        user-msg     (last rendered)
+        history-roles (map (fn [m]
+                             {:role    (if (= (:type m) "user") "user" "assistant")
+                              :content (:content m)})
+                           history-messages)
+        full-messages (vec (concat [system-msg] history-roles [user-msg]))
+        _ (prn "messages for chat gpt" full-messages)
         config (:config conversation-config)]
-    (openai/chat-completion openapi-client message config))
-  )
+    (openai/chat-completion openapi-client full-messages config)))
 
 
 (defn edit-slide
@@ -281,9 +285,8 @@
        (let [req-type (:type req)
          type-name (if (keyword? req-type) (name req-type) (str req-type))
          conversation-config (get-conversation-template req-type)
-         db nil
-         current-messages (:messages (current-conversation req db))
-         _ (log/debug "current-messages" current-messages)
+         history-messages (or (:messages req) [])
+         _ (log/debug "history-messages" history-messages)
 
          _ (report-progress! on-progress :thinking)
 
@@ -292,7 +295,7 @@
          _ (report-progress! on-progress :creating)
 
          settings (:requirements req)
-         res (ask-chat-gpt open-api-client conversation-config current-messages request-msg settings)
+         res (ask-chat-gpt open-api-client conversation-config history-messages request-msg settings)
 
          _ (report-progress! on-progress :polishing)
 

@@ -25,6 +25,7 @@
                         :type (keyword (:type parsed-msg))
                         :content (:content parsed-msg)
                         :requirements (:requirements parsed-msg {})
+                        :messages (or (:messages parsed-msg) [])
                         :edit (:edit parsed-msg)}
 
           _ (log/info "Processed request data:" request-data)
