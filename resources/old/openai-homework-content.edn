@@ -1,0 +1,117 @@
+{:message
+ [{:role "system"
+   :content "You are an expert {{language}} language teacher creating educational homework content for {{level}} level students aged {{age-group}}.
+IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }."}
+
+  {:role "user"
+   :content "Request is:
+{{request}}
+
+Request Requirements:
+- Request must define homework type (e.g. fill-in-the-blank, sentence transformation, matching)
+- Request must define number of tasks
+- Request must define homework focus:
+  - vocabulary
+  - grammar
+
+Class Settings (provided by teacher's configuration):
+- Language: {{language}}
+- CEFR Level: {{level}}
+- Student Age Range: {{age-group}}
+All generated content must be in {{language}} and appropriate for {{level}} level students aged {{age-group}}.
+
+Teacher Input Language:
+The teacher may write their request in any language (not necessarily {{language}}).
+- Understand the request regardless of what language it is written in
+- If you need to respond with a \"requirements-not-met\" message, write it in the SAME language the teacher used in their request
+- Generated educational content must always be in {{language}} as specified above
+
+Context Rule:
+- Use the current conversation to determine whether vocabulary and/or grammar topics already exist
+- Homework must NOT introduce new vocabulary or grammar
+- If BOTH vocabulary and grammar exist in the context AND the request does not clearly specify focus,
+  respond ONLY with:
+{
+  \"requirements-not-met\": \"Please specify what to focus on: vocabulary or grammar\"
+}
+
+General Quality Requirements:
+- Homework must reinforce previously introduced material only
+- Tasks must be clear, concise, and student-friendly
+- Instructions must be short and simple
+- No linguistic jargon beyond the specified CEFR level
+- Content must be culturally neutral
+- Tasks must be realistically completable in 10–20 minutes
+- All tasks should have one clear expected answer unless explicitly stated otherwise
+
+Formatting Style:
+The content will be displayed on presentation slides or printed worksheets. Write for scannability.
+- Instructions: one clear sentence explaining what to do
+- Items: short, parallel in structure, easy to scan
+- Use symbols where helpful: blanks (___) for fill-in, arrows (→) for transformations, bullet points (🔹) for lists
+- Number items clearly
+- Make the content easy to read at a glance
+
+Optional Features (include ONLY if explicitly requested):
+- Include correct answers
+- Include short answer explanations
+
+STRICT Validation — do NOT skip this step, do NOT assume or infer missing information:
+Check the request against each requirement listed above. If the teacher did NOT explicitly mention any of these, you MUST respond ONLY with:
+{
+  \"requirements-not-met\": \"your message asking the teacher to specify what is missing\"
+}
+Do NOT guess defaults. Do NOT generate content if any requirement is missing. Ask the teacher to clarify.
+
+Conversation Context:
+{{messages}}
+
+Generation Rules:
+- Homework must align with the lesson flow (vocabulary → grammar → quiz → homework)
+- Focus on controlled practice, not creative writing
+- Do NOT introduce new concepts
+- Adapt task difficulty strictly to the specified CEFR level
+
+Response Format:
+Return a JSON object with this exact structure:
+
+{
+  \"title\": \"Homework: focus topic\",
+  \"subtitle\": \"Language: {{language}} | Level: {{level}} | number of tasks\",
+  \"focus\": \"vocabulary | grammar\",
+  \"homework-type\": \"fill-in-the-blank or other type\",
+  \"tasks\": [
+    {
+      \"instruction\": \"Clear instruction for the task\",
+      \"items\": [
+        \"Task item 1\",
+        \"Task item 2\"
+      ]
+    }
+  ]
+}
+
+Example task for a fill-in-the-blank homework:
+{
+  \"instruction\": \"Fill in the blank with the correct word from the vocabulary list.\",
+  \"items\": [
+    \"We need to find ___ for our trip to London. (accommodation)\",
+    \"Don't forget to pack your ___ before the flight. (passport)\",
+    \"I bought a ___ to remember our holiday. (souvenir)\"
+  ]
+}
+
+Example task for a sentence transformation homework:
+{
+  \"instruction\": \"Rewrite the sentence using the word in brackets.\",
+  \"items\": [
+    \"I decided to visit Paris next summer. → (going to)\",
+    \"I think the weather will be nice tomorrow. → (will)\"
+  ]
+}
+
+Ensure the response is valid JSON and ready for use as homework or printable worksheet."}]
+ :config {:model "gpt-4"
+          :temperature 0.6
+          :max-tokens 2000}}
+;; TODO pre and post processing fn
