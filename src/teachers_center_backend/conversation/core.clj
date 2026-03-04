@@ -169,19 +169,9 @@
 
 
 (defn get-conversation-template [type]
-  (-> (io/resource "conversation-content.edn")
-      slurp
-      edn/read-string)
-  #_(let [type-name (if (keyword? type) (name type) (str type))
-        filename (str "openai-" type-name "-content.edn")
-        resource (io/resource filename)]
-    (if resource
-      (-> resource slurp edn/read-string)
-      (do
-        (log/warn "Template not found for type:" type-name ", falling back to vocabulary")
-        (-> (io/resource "openai-vocabulary-content.edn")
-            slurp
-            edn/read-string)))))
+  (if (= type :edit)
+    (-> (io/resource "conversation-edit-content.edn") slurp edn/read-string)
+    (-> (io/resource "conversation-content.edn") slurp edn/read-string)))
 
 (defn ask-chat-gpt [openapi-client conversation-config history-messages request-msg settings]
   (let [msg-template (:message conversation-config)
@@ -214,16 +204,13 @@
         slide-index (:slideIndex edit-data)
         current-slide (:currentSlide edit-data)
         original-request (:originalRequest edit-data)
-        original-type (:originalType edit-data)
 
         ;; Build combined request string with all context
         combined-request (str "ORIGINAL REQUEST: " original-request "\n\n"
                               "CURRENT SLIDE DATA: " (json/generate-string current-slide) "\n\n"
                               "EDIT INSTRUCTION: " (:content req))
 
-        ;; Load per-type edit template (e.g., :edit-vocabulary)
-        edit-template-type (keyword (str "edit-" original-type))
-        conversation-config (get-conversation-template edit-template-type)
+        conversation-config (get-conversation-template :edit)
 
         _ (report-progress! on-progress :thinking)
         _ (report-progress! on-progress :creating)
