@@ -28,6 +28,8 @@ Rules:
 - Only change what the teacher explicitly asked to change
 - Keep all other content exactly as it was
 - Maintain the same language ({{language}}) and CEFR level ({{level}}) as the original
+- When adding an example: add it as a NEW separate line — do NOT extend or modify the existing example line
+- When removing an example: remove only that line, keep all other lines intact
 - Return valid JSON only"}]
  :config {:model "gpt-4"
           :temperature 0.5
