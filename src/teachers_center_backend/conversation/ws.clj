@@ -42,5 +42,15 @@
 
     (catch Exception e
       (log/error e "Error processing WebSocket message:" msg)
-      (send-fn (json/generate-string {:error "Failed to process message"
-                                      :message (.getMessage e)})))))
+      (let [error-code (or (:error-code (ex-data e)) :unknown-error)
+            user-msg   (case error-code
+                         :quota-exceeded      "We've temporarily reached our AI usage limit. Please try again in a few minutes. If the problem persists, contact support."
+                         :auth-error          "There's a configuration problem on our end. Please contact support."
+                         :service-unavailable "The AI service is temporarily unavailable. Please try again shortly."
+                         :network-error       "We couldn't reach the AI service. Please check your connection and try again."
+                         :bad-request         "Your request could not be processed. Please try rephrasing it."
+                         :api-error           "An unexpected error occurred with the AI service. Please try again."
+                         "Something went wrong on our end. Please try again or contact support.")]
+        (send-fn (json/generate-string {:type    "error"
+                                        :code    (name error-code)
+                                        :message user-msg}))))))

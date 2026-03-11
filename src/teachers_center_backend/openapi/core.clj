@@ -7,6 +7,14 @@
   {:api-key api-key
    :base-url base-url})
 
+(defn- classify-openai-error [status]
+  (cond
+    (= status 429)           :quota-exceeded
+    (= status 401)           :auth-error
+    (= status 400)           :bad-request
+    (#{503 529} status)      :service-unavailable
+    :else                    :api-error))
+
 (defn make-request [client endpoint payload]
   (try
     (let [url (str (:base-url client) endpoint)
@@ -23,14 +31,16 @@
             (log/error "OpenAI API error response" {:status (:status response)
                                                      :body (:body response)})
             (throw (ex-info "OpenAI API returned error"
-                            {:status (:status response)
-                             :body (:body response)}))))))
+                            {:status     (:status response)
+                             :body       (:body response)
+                             :error-code (classify-openai-error (:status response))}))))))
     (catch Exception e
       (log/error e "OpenAI API request failed" {:message (.getMessage e)
                                                  :class (class e)})
       (throw (ex-info "OpenAI API request failed"
-                      {:error (.getMessage e)
-                       :cause-type (class e)} e)))))
+                      {:error      (.getMessage e)
+                       :cause-type (class e)
+                       :error-code :network-error} e)))))
 
 (defn chat-completion [client messages {:keys [model temperature max-tokens]}]
   (make-request client "/chat/completions"

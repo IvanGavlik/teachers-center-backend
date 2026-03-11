@@ -7,7 +7,7 @@
 (defn replace-placeholders [text params]
   "Replace {{placeholder}} patterns in text with values from params map"
   (reduce (fn [acc [k v]]
-            (str/replace acc (re-pattern (str "\\{\\{" (name k) "\\}\\}")) (str v)))
+            (str/replace acc (re-pattern (str "\\{\\{" (name k) "\\}\\}")) (fn [_] (str v))))
           text
           params))
 
