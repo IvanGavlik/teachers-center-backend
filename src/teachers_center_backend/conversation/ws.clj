@@ -1,6 +1,7 @@
 (ns teachers-center-backend.conversation.ws
   (:require [teachers-center-backend.conversation.core :as conversation]
             [cheshire.core :as json]
+            [clojure.string :as str]
             [clojure.tools.logging :as log]))
 
 (defn make-progress-sender
@@ -24,7 +25,12 @@
                         :conversation-id (:conversation-id parsed-msg)
                         :type (keyword (:type parsed-msg))
                         :content (:content parsed-msg)
-                        :requirements (:requirements parsed-msg {})
+                        :requirements (let [reqs (:requirements parsed-msg {})
+                                           age  (get reqs :age-group)]
+                                       (assoc reqs :age-group
+                                              (if (or (nil? age) (str/blank? (str age)))
+                                                "Not required"
+                                                age)))
                         :messages (or (:messages parsed-msg) [])
                         :edit (:edit parsed-msg)}
 
