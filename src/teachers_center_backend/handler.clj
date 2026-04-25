@@ -1,12 +1,10 @@
 (ns teachers-center-backend.handler
-  (:require [compojure.core :refer [defroutes GET POST]]
+  (:require [compojure.core :refer [defroutes GET]]
             [compojure.route :as route]
             [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
             [ring.middleware.cors :refer [wrap-cors]]
-            [ring.util.response :refer [response status]]
+            [ring.util.response :refer [response]]
             [org.httpkit.server :refer [with-channel send! on-close on-receive]] ; web socket
-            [clojure.tools.logging :as log]
-            [teachers-center-backend.content :as content]
             [teachers-center-backend.conversation.ws :as conversation-ws]))
 
 (defn health-handler [_]
@@ -29,43 +27,17 @@
                 ;; optional: handle close
                 (on-close ch (fn [status] (println "WebSocket closed:" status)))))
 
-(defn generate-content-handler [openai-client openapi-content]
-  (fn [request]
-    (try
-      (let [body (:body request)
-            content-type (:content_type body)
-            result (case content-type
-                     "vocabulary" (content/generate-vocabulary openai-client openapi-content body)
-                     "grammar" (content/generate-grammar openai-client body)
-                     "reading" (content/generate-reading openai-client body)
-                     "exercises" (content/generate-exercises openai-client body)
-                     {:success false :error "Unknown content type"})]
-        (if (:success result)
-          (response result)
-          (-> (response result)
-              (status 400))))
-      (catch Exception e
-        (log/error e "Error generating content")
-        (-> (response {:success false 
-                       :error "Internal server error"})
-            (status 500))))))
-
 (defroutes app-routes
   (GET "/health" [] health-handler)
   (GET "/ws" [] (fn [request] (ws-handler (:openapi-client request) request)))
-  (POST "/api/generate" [] (fn [request]
-                             (let [openai-client (:openapi-client request)
-                                   openai-content (:openapi-content request)]
-                               ((generate-content-handler openai-client openai-content) request))))
   (route/not-found {:success false :error "Route not found"}))
 
-(defn create-handler [openai-client openapi-content]
+(defn create-handler [openai-client]
   (let [inject (fn [handler]
                         (fn [request]
                           ;; Inject into request for handlers
                           (handler (assoc request
-                                     :openapi-client openai-client
-                                     :openapi-content openapi-content))))]
+                                     :openapi-client openai-client))))]
     (-> app-routes
         inject
         (wrap-json-body {:keywords? true})
