@@ -24,6 +24,7 @@
                                            "Content-Type" "application/json"}
                                  :body body-json
                                  :throw-exceptions false
+                                 :cookie-policy :standard
                                  :timeout 60000})]
         (if (= 200 (:status response))
           (json/parse-string (:body response) true)

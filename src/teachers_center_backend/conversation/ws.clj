@@ -15,15 +15,13 @@
   "Process incoming WebSocket message and send responses via send-fn."
   [open-api-client send-fn msg]
   (try
-    (log/info "Received WebSocket message:" msg)
+    (log/info "Conversation request:" msg)
 
     (let [parsed-msg (json/parse-string msg true)
-          _ (log/debug "Parsed message:" parsed-msg)
-
           request-data {:user-id (:user-id parsed-msg)
                         :channel-name (:channel-name parsed-msg)
                         :conversation-id (:conversation-id parsed-msg)
-                        :type (keyword (:type parsed-msg))
+                        :type (keyword (:type parsed-msg))  ; default always vocabulary on the FE TODO fix this type-selector on the FE
                         :content (:content parsed-msg)
                         :requirements (let [reqs (:requirements parsed-msg {})
                                            age  (get reqs :age-group)]
@@ -33,17 +31,12 @@
                                                 age)))
                         :messages (or (:messages parsed-msg) [])
                         :edit (:edit parsed-msg)}
-
-          _ (log/info "Processed request data:" request-data)
-
           on-progress (make-progress-sender send-fn)
           response (conversation/conversation open-api-client request-data on-progress)
 
           _ (log/info "Conversation response:" response)
 
           json-response (json/generate-string response)]
-
-      (log/info "Sending WebSocket response")
       (send-fn json-response))
 
     (catch Exception e

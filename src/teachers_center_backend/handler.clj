@@ -1,6 +1,7 @@
 (ns teachers-center-backend.handler
   (:require [compojure.core :refer [defroutes GET]]
             [compojure.route :as route]
+            [clojure.tools.logging :as log]
             [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
             [ring.middleware.cors :refer [wrap-cors]]
             [ring.util.response :refer [response]]
@@ -25,7 +26,7 @@
                                    (conversation-ws/on-request-callback open-api-client send-fn msg))))
 
                 ;; optional: handle close
-                (on-close ch (fn [status] (println "WebSocket closed:" status)))))
+                (on-close ch (fn [status] (log/info "WebSocket closed:" status)))))
 
 (defroutes app-routes
   (GET "/health" [] health-handler)

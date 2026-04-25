@@ -41,7 +41,6 @@
   (when on-progress-fn
     (let [messages (get progress-messages stage)
           message (rand-nth messages)]
-      (log/debug "Reporting progress:" stage message)
       (on-progress-fn {:stage message}))))
 
 ; TODO next step redis DB
@@ -183,7 +182,6 @@
                               :content (:content m)})
                            history-messages)
         full-messages (vec (concat [system-msg] history-roles [user-msg]))
-        _ (prn "messages for chat gpt" full-messages)
         config (:config conversation-config)]
     (openai/chat-completion openapi-client full-messages config)))
 
@@ -270,7 +268,6 @@
        (report-progress! on-progress :starting)
 
        (let [req-type (:type req)
-         type-name (if (keyword? req-type) (name req-type) (str req-type))
          conversation-config (get-conversation-template req-type)
          history-messages (or (:messages req) [])
          _ (log/debug "history-messages" history-messages)
@@ -294,9 +291,7 @@
          (log/debug "mark conversation as not done"))
        (do
          (log/debug "mark conversation as done")))
-     ;; Include type in response for frontend routing
-     ;; Stage 5 (100%) is implicit when the final response is sent
-     (assoc res-data :type type-name))))))
+     res-data)))))
 
 
 (comment
@@ -306,4 +301,4 @@
              :content "I need a vocabulary list for my Spanish A1 class about food and restaurants"
              }
         res (conversation req)]
-   (prn "data" res)))
+   (log/info "data" res)))
