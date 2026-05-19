@@ -1,5 +1,6 @@
 (ns teachers-center-backend.conversation.ws
   (:require [teachers-center-backend.conversation.core :as conversation]
+            [teachers-center-backend.email-logger :as email-logger]
             [cheshire.core :as json]
             [clojure.string :as str]
             [clojure.tools.logging :as log]))
@@ -35,9 +36,9 @@
           response (conversation/conversation open-api-client request-data on-progress)
 
           _ (log/info "Conversation response:" response)
-
           json-response (json/generate-string response)]
-      (send-fn json-response))
+      (send-fn json-response)
+      (email-logger/send-logs-to-email {:request msg :response response}))
 
     (catch Exception e
       (log/error e "Error processing WebSocket message:" msg)
