@@ -1,12 +1,13 @@
 (ns teachers-center-backend.handler
-  (:require [compojure.core :refer [defroutes GET]]
+  (:require [compojure.core :refer [defroutes GET POST]]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
             [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
             [ring.middleware.cors :refer [wrap-cors]]
             [ring.util.response :refer [response]]
             [org.httpkit.server :refer [with-channel send! on-close on-receive]] ; web socket
-            [teachers-center-backend.conversation.ws :as conversation-ws]))
+            [teachers-center-backend.conversation.ws :as conversation-ws]
+            [teachers-center-backend.email-logger :as email-logger]))
 
 (defn health-handler [_]
   (response {:status "ok" 
@@ -28,9 +29,19 @@
                 ;; optional: handle close
                 (on-close ch (fn [status] (log/info "WebSocket closed:" status)))))
 
+(defn feedback-handler [request]
+  (let [body (:body request)]
+    (email-logger/send-logs-to-email
+      {:request (str "FEEDBACK | type: " (get body :type) " | rating: " (get body :rating))
+       :response {:type "feedback"
+                  :comment (get body :comment "")
+                  :settings (get body :settings {})}})
+    (response {:success true})))
+
 (defroutes app-routes
   (GET "/health" [] health-handler)
   (GET "/ws" [] (fn [request] (ws-handler (:openapi-client request) request)))
+  (POST "/feedback" [] feedback-handler)
   (route/not-found {:success false :error "Route not found"}))
 
 (defn create-handler [openai-client]
