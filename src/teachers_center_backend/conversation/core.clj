@@ -177,9 +177,10 @@
         rendered     (content/render-content msg-template (merge settings {:request request-msg}))
         system-msg   (first rendered)
         user-msg     (last rendered)
-        history-roles (->> history-messages
-                           (filter #(= (:type %) "user"))
-                           (map #(hash-map :role "user" :content (:content %))))
+        history-roles (map (fn [m]
+                             {:role    (if (= (:type m) "user") "user" "assistant")
+                              :content (:content m)})
+                           history-messages)
         full-messages (vec (concat [system-msg] history-roles [user-msg]))
         config (:config conversation-config)]
     (openai/chat-completion openapi-client full-messages config)))
