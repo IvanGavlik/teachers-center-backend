@@ -168,8 +168,10 @@
 
 
 (defn get-conversation-template [type]
-  (if (= type :edit)
-    (-> (io/resource "conversation-edit-content.edn") slurp edn/read-string)
+  (case type
+    :edit (-> (io/resource "conversation-edit-content.edn") slurp edn/read-string)
+    :conversation (-> (io/resource "conversation-content.edn") slurp edn/read-string)
+    ;; unrecognized type falls back to the normal conversation template
     (-> (io/resource "conversation-content.edn") slurp edn/read-string)))
 
 (defn ask-chat-gpt [openapi-client conversation-config history-messages request-msg settings]
@@ -237,6 +239,45 @@
 ; - open new conversation in chat gpt for each new conversation in url or until we are end (web socket disconects)
 ; TODO do I want to save messages or not the claude approach (for now save)
 ; TODO lets have open-api-client as callback fn as on-progress  - expolore other options I want here have only business logic
+(defn generate-conversation
+  "Normal slide-generation flow (as opposed to :edit)."
+  [open-api-client req on-progress]
+  ; get room or create new one - for now we only have one
+  ; get conversation or create new one
+  ; get messages - I dont need to send message to chat gpt just send him last one from the reques
+
+  ; check state(GATHERING_INFO/GENERATE) and slots (tracking requirements - what is missing) - this is done by chatgpt
+  ; if missing something ask (validation), if complete generate answer
+
+  (log/debug "req " req)
+
+  ;; Stage 1: Starting (10%)
+  (report-progress! on-progress :starting)
+
+  (let [req-type (:type req)
+        conversation-config (get-conversation-template req-type)
+        history-messages (or (:messages req) [])
+        _ (log/debug "history-messages" history-messages)
+
+        _ (report-progress! on-progress :thinking)
+
+        request-msg (:content req)
+
+        _ (report-progress! on-progress :creating)
+
+        settings (:requirements req)
+        res (ask-chat-gpt open-api-client conversation-config history-messages request-msg settings)
+
+        _ (report-progress! on-progress :polishing)
+
+        res-content (:content (:message (first (:choices res))))
+        _ (log/debug "res-content " res-content)
+        res-data (json/parse-string res-content true)]
+    (if (:requirements-not-met res-data)
+      (log/debug "mark conversation as not done")
+      (log/debug "mark conversation as done"))
+    res-data))
+
 (defn conversation
   "Process a conversation request and return response data.
 
@@ -249,49 +290,12 @@
   ([open-api-client req]
    (conversation open-api-client req nil))
   ([open-api-client req on-progress]
-   ;; Route edit requests to edit-slide function
-   (if (= :edit (:type req))
-     (edit-slide open-api-client req on-progress)
-
-     ;; Normal generation flow
-     (do
-       ; get room or create new one - for now we only have one
-       ; get conversation or create new one
-       ; get messages - I dont need to send message to chat gpt just send him last one from the reques
-
-       ; check state(GATHERING_INFO/GENERATE) and slots (tracking requirements - what is missing) - this is done by chatgpt
-       ; if missing something ask (validation), if complete generate answer
-
-       (log/debug "req " req)
-
-       ;; Stage 1: Starting (10%)
-       (report-progress! on-progress :starting)
-
-       (let [req-type (:type req)
-         conversation-config (get-conversation-template req-type)
-         history-messages (or (:messages req) [])
-         _ (log/debug "history-messages" history-messages)
-
-         _ (report-progress! on-progress :thinking)
-
-         request-msg (:content req)
-
-         _ (report-progress! on-progress :creating)
-
-         settings (:requirements req)
-         res (ask-chat-gpt open-api-client conversation-config history-messages request-msg settings)
-
-         _ (report-progress! on-progress :polishing)
-
-         res-content (:content (:message (first (:choices res))))
-         _ (log/debug "res-content " res-content)
-         res-data (json/parse-string res-content true)]
-     (if (:requirements-not-met res-data)
-       (do
-         (log/debug "mark conversation as not done"))
-       (do
-         (log/debug "mark conversation as done")))
-     res-data)))))
+   (case (:type req)
+     :edit (edit-slide open-api-client req on-progress)
+     :conversation (generate-conversation open-api-client req on-progress)
+     ;; TODO :interactivity will dispatch to its own generate-interactivity here
+     ;; unrecognized type falls back to normal generation
+     (generate-conversation open-api-client req on-progress))))
 
 
 (comment

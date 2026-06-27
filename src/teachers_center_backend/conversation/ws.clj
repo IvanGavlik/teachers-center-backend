@@ -22,7 +22,7 @@
           request-data {:user-id (:user-id parsed-msg)
                         :channel-name (:channel-name parsed-msg)
                         :conversation-id (:conversation-id parsed-msg)
-                        :type (keyword (:type parsed-msg))  ; default always vocabulary on the FE TODO fix this type-selector on the FE
+                        :type (keyword (:type parsed-msg))  ; "edit" or "conversation" - see conversation/core's explicit case dispatch (future "interactivity" type adds a case there)
                         :content (:content parsed-msg)
                         :requirements (let [reqs (:requirements parsed-msg {})
                                            age  (get reqs :age-group)]
@@ -31,7 +31,8 @@
                                                 "Not required"
                                                 age)))
                         :messages (or (:messages parsed-msg) [])
-                        :edit (:edit parsed-msg)}
+                        :edit (:edit parsed-msg)            ; "edit" payload TODO rename it
+                        }
           on-progress (make-progress-sender send-fn)
           response (conversation/conversation open-api-client request-data on-progress)
 
