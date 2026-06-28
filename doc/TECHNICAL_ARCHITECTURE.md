@@ -1,5 +1,7 @@
 # Foreign Language Teachers Chat App - Technical Architecture
 
+## TODO has to be updated was used for initial planning it does reflect current state
+
 > AI-powered chat application for foreign language teachers with PowerPoint/Google Slides integration
 
 ## Table of Contents

@@ -118,55 +118,10 @@ Intelj specific: Then connect using remote
 clj -M -m teachers-center-backend.core
 ```
 
-## API Endpoints
-
-### Health Check
-```
-GET /health
-```
-
-### Generate Content
-```
-POST /api/generate
-Content-Type: application/json
-
-{
-  "content_type": "vocabulary",
-  "language": "en",
-  "level": "B1", 
-  "parameters": {
-    "topic": "food and cooking",
-    "word_count": 10,
-    "include_examples": true,
-    "include_images": false
-  }
-}
-```
-
-## Content Types
-
-- **vocabulary** - Vocabulary word lists with definitions and examples
-- **grammar** - Grammar explanations with examples (TODO)
-- **reading** - Reading passages with comprehension questions (TODO)  
-- **exercises** - Practice exercises and assessments (TODO)
 
 ## Testing
 
-Test the vocabulary endpoint:
-```bash
-curl -X POST http://localhost:2000/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content_type": "vocabulary",
-    "language": "en", 
-    "level": "B1",
-    "parameters": {
-      "topic": "travel",
-      "word_count": 5,
-      "include_examples": true
-    }
-  }'
-```
+TODO to be added
 
 ## Troubleshooting
 
@@ -218,18 +173,6 @@ export CLOJURE_LOG_LEVEL=DEBUG
 ```clojure
 (require '[integrant.repl.state :as state])
 state/system  ; View running system components
-```
-
-**Test OpenAI connection manually:**
-```bash
-curl -X POST https://api.openai.com/v1/chat/completions \
-  -H "Authorization: Bearer $OPENAI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-4",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "max_tokens": 10
-  }'
 ```
 
 ## Architecture

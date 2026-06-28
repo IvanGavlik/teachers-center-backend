@@ -30,7 +30,6 @@
                                               (if (or (nil? age) (str/blank? (str age)))
                                                 "Not required"
                                                 age)))
-                        :messages (or (:messages parsed-msg) [])
                         :edit (:edit parsed-msg)            ; "edit" payload TODO rename it
                         }
           on-progress (make-progress-sender send-fn)
