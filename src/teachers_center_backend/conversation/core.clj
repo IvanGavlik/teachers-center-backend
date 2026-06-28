@@ -174,18 +174,21 @@
     ;; unrecognized type falls back to the normal conversation template
     (-> (io/resource "conversation-content.edn") slurp edn/read-string)))
 
-(defn ask-chat-gpt [openapi-client conversation-config history-messages request-msg settings]
-  (let [msg-template (:message conversation-config)
-        rendered     (content/render-content msg-template (merge settings {:request request-msg}))
-        system-msg   (first rendered)
-        user-msg     (last rendered)
-        history-roles (map (fn [m]
-                             {:role    (if (= (:type m) "user") "user" "assistant")
-                              :content (:content m)})
-                           history-messages)
-        full-messages (vec (concat [system-msg] history-roles [user-msg]))
-        config (:config conversation-config)]
-    (openai/chat-completion openapi-client full-messages config)))
+;; In-memory store: { "conversation-id" -> { :last-response-id "resp_..." } }
+;; Resets on server restart. Sufficient for v1 — replace with Redis/DB in a later iteration.
+(def conversation-store (atom {}))
+
+(defn ask-responses-api
+  [openapi-client conversation-config request-msg settings previous-response-id]
+  (let [rendered     (content/render-content conversation-config (merge settings {:request request-msg}))
+        instructions (:instructions rendered)
+        input        (:user rendered)
+        config       (:config rendered)]
+    (openai/responses-api openapi-client
+                          {:instructions         instructions
+                           :input                input
+                           :previous-response-id previous-response-id}
+                          config)))
 
 
 (defn edit-slide
@@ -215,13 +218,13 @@
         _ (report-progress! on-progress :thinking)
         _ (report-progress! on-progress :creating)
 
-        ;; Call GPT with combined request (empty messages since context is in request)
+        ;; Edit is always one-shot — no conversation chain, so previous-response-id is nil
         settings (:requirements req)
-        res (ask-chat-gpt open-api-client conversation-config [] combined-request settings)
+        res (ask-responses-api open-api-client conversation-config combined-request settings nil)
 
         _ (report-progress! on-progress :polishing)
 
-        res-content (:content (:message (first (:choices res))))
+        res-content (openai/response-output-text res)
         _ (log/debug "edit-slide response:" res-content)
         res-data (json/parse-string res-content true)]
 
@@ -256,27 +259,29 @@
 
   (let [req-type (:type req)
         conversation-config (get-conversation-template req-type)
-        history-messages (or (:messages req) [])
-        _ (log/debug "history-messages" history-messages)
 
         _ (report-progress! on-progress :thinking)
 
         request-msg (:content req)
+        conversation-id (or (when (seq (str (:conversation-id req))) (str (:conversation-id req)))
+                            (str (java.util.UUID/randomUUID)))
+        previous-response-id (get-in @conversation-store [conversation-id :last-response-id])
 
         _ (report-progress! on-progress :creating)
 
         settings (:requirements req)
-        res (ask-chat-gpt open-api-client conversation-config history-messages request-msg settings)
+        res (ask-responses-api open-api-client conversation-config request-msg settings previous-response-id)
 
+        _ (swap! conversation-store assoc-in [conversation-id :last-response-id] (:id res))
         _ (report-progress! on-progress :polishing)
 
-        res-content (:content (:message (first (:choices res))))
+        res-content (openai/response-output-text res)
         _ (log/debug "res-content " res-content)
         res-data (json/parse-string res-content true)]
     (if (:requirements-not-met res-data)
       (log/debug "mark conversation as not done")
       (log/debug "mark conversation as done"))
-    res-data))
+    (assoc res-data :conversation-id conversation-id)))
 
 (defn conversation
   "Process a conversation request and return response data.
@@ -299,10 +304,56 @@
 
 
 (comment
-  ; TODO test with contesxt in which we have current message and it has to continue conversation
-  (let [req {:user-id "user-123"
-             :type "generate vocabulary"
-             :content "I need a vocabulary list for my Spanish A1 class about food and restaurants"
-             }
-        res (conversation req)]
-   (log/info "data" res)))
+  (require '[integrant.repl.state :refer [system]])
+  (def client (openai/create-client env-key "https://api.openai.com/v1"))
+  #_(def client (:teachers-center-backend.system/openai-client system))
+
+  (def base-req
+    {:user-id      "user-repl"
+     :channel-name "repl"
+     :type         :conversation
+     :requirements {:language     "English"
+                    :level        "B1"
+                    :age-group    "teenagers"
+                    :native-language "No"}})
+
+  ;; ── Case 1: clear request → expect slides generated immediately ──────────────
+  (def res1 (generate-conversation client
+                                   (assoc base-req
+                                          :conversation-id nil
+                                          :content "teach present simple")
+                                   nil))
+  (println "conversation-id:" (:conversation-id res1))
+  (println "title:"           (:title res1))
+  (println "slides count:"    (count (:slides res1)))
+
+  ;; ── Case 2: follow-up using the id from case 1 ───────────────────────────────
+  ;; OpenAI chains the history via previous_response_id stored in the atom.
+  (def res2 (generate-conversation client
+                                   (assoc base-req
+                                          :conversation-id (:conversation-id res1)
+                                          :content "add a slide focusing only on negatives")
+                                   nil))
+  (println "conversation-id:" (:conversation-id res2))
+  (println "slides count:"    (count (:slides res2)))
+
+  ;; ── Case 3: vague request → expect clarification question ────────────────────
+  (def res3 (generate-conversation client
+                                   (assoc base-req
+                                          :conversation-id nil
+                                          :content "teach something")
+                                   nil))
+  (println "requirements-not-met:" (:requirements-not-met res3))
+  (println "conversation-id:"      (:conversation-id res3))
+
+  ;; ── Case 4: answer the clarification from case 3 → expect slides ─────────────
+  (def res4 (generate-conversation client
+                                   (assoc base-req
+                                          :conversation-id (:conversation-id res3)
+                                          :content "present perfect for describing experiences")
+                                   nil))
+  (println "title:"        (:title res4))
+  (println "slides count:" (count (:slides res4)))
+
+  ;; ── Inspect the atom after running the cases ─────────────────────────────────
+  (clojure.pprint/pprint @conversation-store))
