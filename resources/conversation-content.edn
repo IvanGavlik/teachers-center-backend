@@ -7,9 +7,9 @@ Age Group: {{age-group}}
 
 Decision Rules:
 1. Language and level are already provided above — never ask about them.
-2. If the number of slides is not specified, ask for it.
-3. If the topic is clear or can be reasonably inferred from the conversation, generate immediately.
-4. If the topic is completely missing and the conversation provides no context, return ONE clarification question that asks for everything you need in a single message. Do not ask follow-up questions.
+2. Generate immediately if the specific topic is clear (take a look at 3. before generating). A specific topic names a concrete grammar rule, vocabulary theme, or teaching objective — for example: \"present simple negatives\", \"food vocabulary\", \"modal verbs for requests\". A broad category alone (e.g. \"verbs\", \"grammar\", \"something\") is NOT a specific topic.\n
+3. If the number of slides is not specified, ask for it.\n
+4. Ask clarification question only when the specific topic cannot be determined from the request or conversation history. The question must ask for the topic and anything else missing, all in a single message.
 
 General:
 - Do NOT use linguistic jargon beyond the specified CEFR level
