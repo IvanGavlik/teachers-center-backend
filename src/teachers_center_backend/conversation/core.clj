@@ -176,9 +176,6 @@
     ;; unrecognized type falls back to the normal conversation template
     (-> (io/resource "conversation-content.edn") slurp edn/read-string)))
 
-;; In-memory store: { "conversation-id" -> { :last-response-id "resp_..." } }
-;; Resets on server restart. Sufficient for v1 — replace with Redis/DB in a later iteration.
-(def conversation-store (atom {}))
 
 
 (defn ask-responses-api
@@ -268,14 +265,14 @@
         request-msg (:content req)
         conversation-id (or (when (seq (str (:conversation-id req))) (str (:conversation-id req)))
                             (str (java.util.UUID/randomUUID)))
-        previous-response-id (get-in @conversation-store [conversation-id :last-response-id])
+        previous-response-id (db/get-last-response-id conversation-id)
 
         _ (report-progress! on-progress :creating)
 
         settings (:requirements req)
         res (ask-responses-api open-api-client conversation-config request-msg settings previous-response-id)
 
-        _ (swap! conversation-store assoc-in [conversation-id :last-response-id] (:id res))
+        _ (db/save-last-response-id! conversation-id (:id res))
         _ (report-progress! on-progress :polishing)
 
         res-content (openai/response-output-text res)
@@ -300,14 +297,14 @@
         request-msg          (:content req)
         conversation-id      (or (when (seq (str (:conversation-id req))) (str (:conversation-id req)))
                                  (str (java.util.UUID/randomUUID)))
-        previous-response-id (get-in @conversation-store [conversation-id :last-response-id])
+        previous-response-id (db/get-last-response-id conversation-id)
 
         _ (report-progress! on-progress :creating)
 
         settings             (:requirements req)
         res                  (ask-responses-api open-api-client interactivity-config request-msg settings previous-response-id)
 
-        _ (swap! conversation-store assoc-in [conversation-id :last-response-id] (:id res))
+        _ (db/save-last-response-id! conversation-id (:id res))
         _ (report-progress! on-progress :polishing)
 
         res-content          (openai/response-output-text res)
@@ -396,4 +393,4 @@
   (println "slides count:" (count (:slides res4)))
 
   ;; ── Inspect the atom after running the cases ─────────────────────────────────
-  (clojure.pprint/pprint @conversation-store))
+  (clojure.pprint/pprint @db/conversation-store))
