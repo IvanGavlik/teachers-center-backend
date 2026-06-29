@@ -1,6 +1,7 @@
 (ns teachers-center-backend.conversation.core
   (:require [teachers-center-backend.openapi.core :as openai]
             [teachers-center-backend.content :as content]
+            [teachers-center-backend.db :as db]
             [clojure.edn :as edn]
             [cheshire.core :as json]
             [clojure.java.io :as io]
@@ -169,14 +170,16 @@
 
 (defn get-conversation-template [type]
   (case type
-    :edit (-> (io/resource "conversation-edit-content.edn") slurp edn/read-string)
-    :conversation (-> (io/resource "conversation-content.edn") slurp edn/read-string)
+    :edit          (-> (io/resource "conversation-edit-content.edn") slurp edn/read-string)
+    :interactivity (-> (io/resource "interactivity-content.edn") slurp edn/read-string)
+    :conversation  (-> (io/resource "conversation-content.edn") slurp edn/read-string)
     ;; unrecognized type falls back to the normal conversation template
     (-> (io/resource "conversation-content.edn") slurp edn/read-string)))
 
 ;; In-memory store: { "conversation-id" -> { :last-response-id "resp_..." } }
 ;; Resets on server restart. Sufficient for v1 — replace with Redis/DB in a later iteration.
 (def conversation-store (atom {}))
+
 
 (defn ask-responses-api
   [openapi-client conversation-config request-msg settings previous-response-id]
@@ -283,6 +286,43 @@
       (log/debug "mark conversation as done"))
     (assoc res-data :conversation-id conversation-id)))
 
+(defn generate-interactivity
+  "Generate an interactive activity (e.g. multiple-choice quiz) from a teacher's request."
+  [open-api-client req on-progress]
+  (log/debug "generate-interactivity req" req)
+  (report-progress! on-progress :starting)
+
+  (let [interactivity-config (get-conversation-template :interactivity)
+        mode                 (get-in req [:interactivity :mode])
+
+        _ (report-progress! on-progress :thinking)
+
+        request-msg          (:content req)
+        conversation-id      (or (when (seq (str (:conversation-id req))) (str (:conversation-id req)))
+                                 (str (java.util.UUID/randomUUID)))
+        previous-response-id (get-in @conversation-store [conversation-id :last-response-id])
+
+        _ (report-progress! on-progress :creating)
+
+        settings             (:requirements req)
+        res                  (ask-responses-api open-api-client interactivity-config request-msg settings previous-response-id)
+
+        _ (swap! conversation-store assoc-in [conversation-id :last-response-id] (:id res))
+        _ (report-progress! on-progress :polishing)
+
+        res-content          (openai/response-output-text res)
+        _ (log/debug "generate-interactivity response:" res-content)
+        res-data             (json/parse-string res-content true)
+
+        activity-id          (str (java.util.UUID/randomUUID))
+        _ (db/save-interactivity! activity-id res-data)]
+
+    (assoc res-data
+           :type            "interactivity"
+           :conversation-id conversation-id
+           :activity-id     activity-id
+           :mode            mode)))
+
 (defn conversation
   "Process a conversation request and return response data.
 
@@ -296,9 +336,9 @@
    (conversation open-api-client req nil))
   ([open-api-client req on-progress]
    (case (:type req)
-     :edit (edit-slide open-api-client req on-progress)
-     :conversation (generate-conversation open-api-client req on-progress)
-     ;; TODO :interactivity will dispatch to its own generate-interactivity here
+     :edit          (edit-slide open-api-client req on-progress)
+     :conversation  (generate-conversation open-api-client req on-progress)
+     :interactivity (generate-interactivity open-api-client req on-progress)
      ;; unrecognized type falls back to normal generation
      (generate-conversation open-api-client req on-progress))))
 

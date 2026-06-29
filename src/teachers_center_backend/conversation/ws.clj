@@ -30,7 +30,8 @@
                                               (if (or (nil? age) (str/blank? (str age)))
                                                 "Not required"
                                                 age)))
-                        :edit (:edit parsed-msg)            ; "edit" payload TODO rename it
+                        :edit (:edit parsed-msg)
+                        :interactivity (:interactivity parsed-msg)
                         }
           on-progress (make-progress-sender send-fn)
           response (conversation/conversation open-api-client request-data on-progress)
