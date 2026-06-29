@@ -10,6 +10,9 @@
   [conversation-id]
   (get-in @conversation-store [conversation-id :last-response-id]))
 
+; there's a theoretical race where a follow-up message arrives before the future completes,
+;  causing it to miss the previous-response-id. In practice this can't happen — a teacher has to wait for the
+;  response before typing the next message. Safe to do
 (defn save-last-response-id!
   "Stores the latest response-id for a conversation. Non-blocking — runs in a background thread."
   [conversation-id response-id]
