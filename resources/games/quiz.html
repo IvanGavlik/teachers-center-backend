@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      color: white;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 20px 10px;
+      background: rgba(0,0,0,0.25);
+      gap: 4px;
+    }
+    .quiz-title {
+      font-size: 13px;
+      font-weight: 700;
+      opacity: 0.55;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .counter {
+      font-size: 15px;
+      font-weight: 700;
+      opacity: 0.85;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Progress bar ── */
+    .progress-wrap { height: 6px; background: rgba(255,255,255,0.12); }
+    .progress-fill { height: 100%; background: #f0d800; transition: width 0.4s ease; }
+
+    /* ── Question card ── */
+    .question-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 16px 16px;
+    }
+    .question-card {
+      background: white;
+      color: #1a1a2e;
+      border-radius: 16px;
+      padding: 28px 24px;
+      max-width: 700px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    }
+    .question-text {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    /* ── Explanation (wrong answer only) ── */
+    .explanation-wrap {
+      max-width: 740px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 16px;
+      display: none;
+    }
+    .explanation-wrap.show { display: block; margin-bottom: 12px; }
+    .explanation-inner {
+      background: rgba(255,255,255,0.08);
+      border-left: 4px solid #f0d800;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Answer grid ── */
+    .answers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 0 16px 12px;
+      max-width: 740px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .answer-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 14px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      color: white;
+      text-align: left;
+      min-height: 72px;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+      transition: transform 0.1s, filter 0.15s;
+    }
+    .answer-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.3); }
+    .answer-btn:hover:not(:disabled)  { filter: brightness(1.12); }
+    .answer-btn:disabled              { cursor: default; }
+
+    .answer-btn.red    { background: #e21b3c; }
+    .answer-btn.blue   { background: #1368ce; }
+    .answer-btn.yellow { background: #d89e00; }
+    .answer-btn.green  { background: #26890c; }
+
+    .answer-btn.dimmed  { filter: brightness(0.35) !important; }
+    .answer-btn.correct { outline: 4px solid white; filter: brightness(1.15) !important; }
+    .answer-btn.wrong   { filter: brightness(0.35) !important; outline: 4px solid rgba(255,255,255,0.3); }
+
+    .shape { font-size: 20px; flex-shrink: 0; }
+    .answer-text { font-size: 15px; line-height: 1.3; }
+
+    /* ── Next button ── */
+    .next-wrap { text-align: center; padding: 4px 16px 24px; display: none; }
+    .next-wrap.show { display: block; }
+    .next-btn {
+      background: #f0d800;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 52px;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #b8a200;
+      transition: transform 0.1s;
+      letter-spacing: 0.3px;
+    }
+    .next-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #b8a200; }
+
+    /* ── Results screen ── */
+    .results {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 32px 20px;
+      text-align: center;
+    }
+    .results.show { display: flex; }
+
+    .results-emoji  { font-size: 72px; margin-bottom: 16px; }
+    .results-score  { font-size: 80px; font-weight: 800; color: #f0d800; line-height: 1; margin-bottom: 8px; }
+    .results-label  { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .results-sub    { font-size: 16px; opacity: 0.65; margin-bottom: 36px; }
+
+    .restart-btn {
+      background: #f0d800;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 48px;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #b8a200;
+    }
+
+    @media (max-width: 480px) {
+      .question-text { font-size: 18px; }
+      .answer-btn    { font-size: 13px; min-height: 62px; padding: 14px 10px; }
+      .answers       { gap: 8px; padding: 0 10px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="game">
+  <div class="header">
+    <span class="quiz-title" id="quiz-title"></span>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-fill" id="progress" style="width:0%"></div>
+  </div>
+
+  <div class="question-area">
+    <div class="question-card">
+      <div class="question-text" id="question-text"></div>
+    </div>
+  </div>
+
+  <div class="explanation-wrap" id="explanation-wrap">
+    <div class="explanation-inner" id="explanation-text"></div>
+  </div>
+
+  <div class="answers" id="answers"></div>
+
+  <div class="next-wrap" id="next-wrap">
+    <button class="next-btn" onclick="next()">Next →</button>
+  </div>
+</div>
+
+<div class="results" id="results">
+  <div class="results-emoji" id="results-emoji"></div>
+  <div class="results-score" id="results-score"></div>
+  <div class="results-label" id="results-label"></div>
+  <div class="results-sub"   id="results-sub"></div>
+  <button class="restart-btn" onclick="restart()">Play Again</button>
+</div>
+
+<script>
+  var QUIZ      = {{QUIZ_DATA}};
+  var questions = QUIZ.questions;
+  var total     = questions.length;
+  var idx       = 0;
+  var score     = 0;
+
+  var COLORS = ['red', 'blue', 'yellow', 'green'];
+  var SHAPES = ['▲', '◆', '●', '■'];
+
+  document.title = QUIZ.title || 'Quiz';
+  document.getElementById('quiz-title').textContent = QUIZ.title || '';
+
+  function render() {
+    var q = questions[idx];
+
+    document.getElementById('counter').textContent      = 'Question ' + (idx + 1) + ' of ' + total;
+    document.getElementById('progress').style.width     = (idx / total * 100) + '%';
+    document.getElementById('question-text').textContent = q.question;
+    document.getElementById('explanation-wrap').className = 'explanation-wrap';
+    document.getElementById('explanation-text').textContent = '';
+    document.getElementById('next-wrap').className      = 'next-wrap';
+
+    var answersEl = document.getElementById('answers');
+    answersEl.innerHTML = '';
+
+    q.options.forEach(function(opt, i) {
+      var btn = document.createElement('button');
+      btn.className = 'answer-btn ' + COLORS[i];
+
+      var shape = document.createElement('span');
+      shape.className   = 'shape';
+      shape.textContent = SHAPES[i];
+
+      var text = document.createElement('span');
+      text.className   = 'answer-text';
+      text.textContent = opt;
+
+      btn.appendChild(shape);
+      btn.appendChild(text);
+      btn.onclick = function() { pick(i); };
+      answersEl.appendChild(btn);
+    });
+  }
+
+  function pick(sel) {
+    var q       = questions[idx];
+    var correct = q.correct;
+    var btns    = document.querySelectorAll('.answer-btn');
+
+    btns.forEach(function(b) { b.disabled = true; });
+
+    if (sel === correct) {
+      score++;
+      btns[correct].classList.add('correct');
+      btns.forEach(function(b, i) { if (i !== correct) b.classList.add('dimmed'); });
+    } else {
+      btns[sel].classList.add('wrong');
+      btns[correct].classList.add('correct');
+      btns.forEach(function(b, i) { if (i !== sel && i !== correct) b.classList.add('dimmed'); });
+
+      document.getElementById('explanation-text').textContent = q.explanation;
+      document.getElementById('explanation-wrap').className   = 'explanation-wrap show';
+    }
+
+    document.getElementById('next-wrap').className = 'next-wrap show';
+  }
+
+  function next() {
+    idx++;
+    if (idx < total) { render(); } else { showResults(); }
+  }
+
+  function showResults() {
+    document.getElementById('game').style.display   = 'none';
+    document.getElementById('progress').style.width = '100%';
+
+    var pct = Math.round(score / total * 100);
+    document.getElementById('results-score').textContent = pct + '%';
+    document.getElementById('results-sub').textContent   = score + ' out of ' + total + ' correct';
+
+    var emoji, label;
+    if      (pct === 100) { emoji = '🏆'; label = 'Perfect score!';    }
+    else if (pct >= 80)   { emoji = '🎉'; label = 'Excellent work!';   }
+    else if (pct >= 60)   { emoji = '👍'; label = 'Good job!';         }
+    else if (pct >= 40)   { emoji = '📚'; label = 'Keep practicing!';  }
+    else                  { emoji = '💪'; label = "Don't give up!";     }
+
+    document.getElementById('results-emoji').textContent = emoji;
+    document.getElementById('results-label').textContent = label;
+    document.getElementById('results').className         = 'results show';
+  }
+
+  function restart() {
+    idx   = 0;
+    score = 0;
+    document.getElementById('game').style.display = '';
+    document.getElementById('results').className  = 'results';
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>

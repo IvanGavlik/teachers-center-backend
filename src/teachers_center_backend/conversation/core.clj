@@ -312,7 +312,7 @@
         res-data             (json/parse-string res-content true)
 
         activity-id          (str (java.util.UUID/randomUUID))
-        _ (db/save-interactivity! activity-id res-data)]
+        _ (db/save-interactivity! activity-id (assoc res-data :mode mode))]
 
     (assoc res-data
            :type            "interactivity"

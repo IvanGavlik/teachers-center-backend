@@ -7,7 +7,8 @@
             [ring.util.response :refer [response]]
             [org.httpkit.server :refer [with-channel send! on-close on-receive]] ; web socket
             [teachers-center-backend.conversation.ws :as conversation-ws]
-            [teachers-center-backend.email-logger :as email-logger]))
+            [teachers-center-backend.email-logger :as email-logger]
+            [teachers-center-backend.game :as game]))
 
 (defn health-handler [_]
   (response {:status "ok" 
@@ -42,6 +43,7 @@
   (GET "/health" [] health-handler)
   (GET "/ws" [] (fn [request] (ws-handler (:openapi-client request) request)))
   (POST "/feedback" [] feedback-handler)
+  (GET "/game/:activity-id" [activity-id] (game/game-handler activity-id))
   (route/not-found {:success false :error "Route not found"}))
 
 (defn create-handler [openai-client]
