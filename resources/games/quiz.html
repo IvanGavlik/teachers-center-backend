@@ -44,12 +44,24 @@
     .progress-fill { height: 100%; background: #f0d800; transition: width 0.4s ease; }
 
     /* ── Question card ── */
+    .game-body {
+      flex: 1;
+      display: flex;
+      gap: 16px;
+      padding: 0 16px;
+    }
+    .main-column {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
     .question-area {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 28px 16px 16px;
+      padding: 28px 0 16px;
     }
     .question-card {
       background: white;
@@ -174,16 +186,118 @@
       box-shadow: 0 4px 0 #b8a200;
     }
 
+    /* ── Name entry ── */
+    .name-entry {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 32px 20px;
+      text-align: center;
+    }
+    .name-entry.hide { display: none; }
+    .name-input {
+      margin: 20px 0 28px;
+      padding: 16px 18px;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    /* ── Live scores sidebar (inside the game, beside the question) ── */
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 16px 14px;
+      background: rgba(0,0,0,0.25);
+      border-radius: 16px;
+      overflow-y: auto;
+    }
+    .sidebar-title {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.6;
+      text-align: center;
+      margin-bottom: 2px;
+    }
+    .sidebar-empty { font-size: 13px; opacity: 0.5; font-style: italic; text-align: center; }
+    .sidebar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+    .sidebar-row.me { background: #f0d800; color: #1a1a2e; font-weight: 800; }
+    .sidebar-rank   { width: 20px; flex-shrink: 0; font-weight: 800; opacity: 0.6; text-align: center; }
+    .sidebar-row.me .sidebar-rank { opacity: 1; }
+    .sidebar-name   { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+    .sidebar-score  { flex-shrink: 0; opacity: 0.75; }
+    .sidebar-row.me .sidebar-score { opacity: 1; }
+
+    /* ── Podium (shown on results screen) ── */
+    .podium-title {
+      display: none;
+      font-size: 13px;
+      font-weight: 800;
+      opacity: 0.65;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .podium {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 340px;
+      margin-bottom: 28px;
+    }
+    .podium-col   { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+    .podium-medal { font-size: 24px; }
+    .podium-name  { font-size: 12px; font-weight: 700; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .podium-score { font-size: 11px; opacity: 0.7; }
+    .podium-bar   { width: 100%; border-radius: 8px 8px 0 0; background: rgba(255,255,255,0.15); }
+    .podium-col.rank-1 .podium-bar { height: 64px; background: #f0d800; }
+    .podium-col.rank-2 .podium-bar { height: 46px; }
+    .podium-col.rank-3 .podium-bar { height: 34px; }
+    .podium-col.me .podium-name    { color: #f0d800; }
+
     @media (max-width: 480px) {
       .question-text { font-size: 18px; }
       .answer-btn    { font-size: 13px; min-height: 62px; padding: 14px 10px; }
       .answers       { gap: 8px; padding: 0 10px 10px; }
+
+      .game-body     { flex-direction: column; gap: 10px; }
+      .sidebar       { width: 100%; max-height: 130px; padding: 10px 12px; }
+      .sidebar-title { font-size: 11px; }
+      .sidebar-row   { font-size: 11px; padding: 6px 8px; gap: 5px; }
     }
   </style>
 </head>
 <body>
 
-<div id="game">
+<div class="name-entry" id="name-entry">
+  <div class="results-emoji">✍️</div>
+  <div class="results-label">Enter your name to begin</div>
+  <input class="name-input" id="name-input" type="text" placeholder="Your name" maxlength="40" autofocus>
+  <button class="restart-btn" onclick="startQuiz()">Start</button>
+</div>
+
+<div id="game" style="display:none">
   <div class="header">
     <span class="quiz-title" id="quiz-title"></span>
     <span class="counter" id="counter"></span>
@@ -192,20 +306,31 @@
     <div class="progress-fill" id="progress" style="width:0%"></div>
   </div>
 
-  <div class="question-area">
-    <div class="question-card">
-      <div class="question-text" id="question-text"></div>
+  <div class="game-body">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-title">🏆 Scores</div>
+      <div class="sidebar-list" id="sidebar-list">
+        <div class="sidebar-empty">No scores yet</div>
+      </div>
     </div>
-  </div>
 
-  <div class="explanation-wrap" id="explanation-wrap">
-    <div class="explanation-inner" id="explanation-text"></div>
-  </div>
+    <div class="main-column">
+      <div class="question-area">
+        <div class="question-card">
+          <div class="question-text" id="question-text"></div>
+        </div>
+      </div>
 
-  <div class="answers" id="answers"></div>
+      <div class="explanation-wrap" id="explanation-wrap">
+        <div class="explanation-inner" id="explanation-text"></div>
+      </div>
 
-  <div class="next-wrap" id="next-wrap">
-    <button class="next-btn" onclick="next()">Next →</button>
+      <div class="answers" id="answers"></div>
+
+      <div class="next-wrap" id="next-wrap">
+        <button class="next-btn" onclick="next()">Next →</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -214,21 +339,102 @@
   <div class="results-score" id="results-score"></div>
   <div class="results-label" id="results-label"></div>
   <div class="results-sub"   id="results-sub"></div>
+
+  <div class="podium-title" id="podium-title">🏆 Class Leaderboard</div>
+  <div class="podium" id="podium"></div>
+
   <button class="restart-btn" onclick="restart()">Play Again</button>
 </div>
 
 <script>
-  var QUIZ      = {{QUIZ_DATA}};
-  var questions = QUIZ.questions;
-  var total     = questions.length;
-  var idx       = 0;
-  var score     = 0;
+  var QUIZ         = {{QUIZ_DATA}};
+  var questions    = QUIZ.questions;
+  var total        = questions.length;
+  var idx          = 0;
+  var score        = 0;
+  var studentName  = '';
+  var SESSION_ID   = 'me';
+  var leaderboard  = {}; // sessionId -> {name, score, total} — local to this browser only
+
+  function renderLeaderboard() {
+    var entries = Object.keys(leaderboard).map(function(sessionId) {
+      return { sessionId: sessionId, result: leaderboard[sessionId] };
+    });
+    entries.sort(function(a, b) { return b.result.score - a.result.score; });
+
+    renderSidebar(entries);
+    renderPodium(entries);
+  }
+
+  function renderSidebar(entries) {
+    var el = document.getElementById('sidebar-list');
+
+    if (entries.length === 0) {
+      el.innerHTML = '<div class="sidebar-empty">No scores yet</div>';
+      return;
+    }
+
+    var medals = ['🥇', '🥈', '🥉'];
+    el.innerHTML = entries.map(function(entry, i) {
+      var mine = entry.sessionId === SESSION_ID;
+      var rank = medals[i] || (i + 1);
+      return '<div class="sidebar-row' + (mine ? ' me' : '') + '">' +
+        '<span class="sidebar-rank">' + rank + '</span>' +
+        '<span class="sidebar-name">' + escapeHtml(entry.result.name) + '</span>' +
+        '<span class="sidebar-score">' + entry.result.score + '/' + entry.result.total + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderPodium(entries) {
+    var podiumEl = document.getElementById('podium');
+    var titleEl  = document.getElementById('podium-title');
+    var top3     = entries.slice(0, 3);
+
+    if (top3.length === 0) {
+      podiumEl.innerHTML  = '';
+      titleEl.style.display = 'none';
+      return;
+    }
+    titleEl.style.display = '';
+
+    var medals = ['🥇', '🥈', '🥉'];
+    var visualOrder = [1, 0, 2]; // 2nd, 1st, 3rd — classic podium arrangement
+
+    podiumEl.innerHTML = visualOrder
+      .filter(function(i) { return top3[i]; })
+      .map(function(i) {
+        var entry = top3[i];
+        var mine  = entry.sessionId === SESSION_ID;
+        return '<div class="podium-col rank-' + (i + 1) + (mine ? ' me' : '') + '">' +
+          '<span class="podium-medal">' + medals[i] + '</span>' +
+          '<span class="podium-name">' + escapeHtml(entry.result.name) + '</span>' +
+          '<span class="podium-score">' + entry.result.score + '/' + entry.result.total + '</span>' +
+          '<div class="podium-bar"></div>' +
+          '</div>';
+      }).join('');
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
 
   var COLORS = ['red', 'blue', 'yellow', 'green'];
   var SHAPES = ['▲', '◆', '●', '■'];
 
   document.title = QUIZ.title || 'Quiz';
   document.getElementById('quiz-title').textContent = QUIZ.title || '';
+
+  function startQuiz() {
+    var name = document.getElementById('name-input').value.trim();
+    if (!name) return;
+    studentName = name;
+    document.getElementById('name-entry').className = 'name-entry hide';
+    document.getElementById('game').style.display = '';
+    render();
+  }
 
   function render() {
     var q = questions[idx];
@@ -308,6 +514,9 @@
     document.getElementById('results-emoji').textContent = emoji;
     document.getElementById('results-label').textContent = label;
     document.getElementById('results').className         = 'results show';
+
+    leaderboard[SESSION_ID] = { name: studentName, score: score, total: total };
+    renderLeaderboard();
   }
 
   function restart() {
@@ -317,8 +526,6 @@
     document.getElementById('results').className  = 'results';
     render();
   }
-
-  render();
 </script>
 </body>
 </html>
