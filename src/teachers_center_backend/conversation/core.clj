@@ -168,13 +168,20 @@
       (create-empty-conversation (:user-id req) (:type req) (:requirements req))))
 
 
-(defn get-conversation-template [type]
-  (case type
-    :edit          (-> (io/resource "conversation-edit-content.edn") slurp edn/read-string)
-    :interactivity (-> (io/resource "interactivity-content.edn") slurp edn/read-string)
-    :conversation  (-> (io/resource "conversation-content.edn") slurp edn/read-string)
-    ;; unrecognized type falls back to the normal conversation template
-    (-> (io/resource "conversation-content.edn") slurp edn/read-string)))
+(def interactivity-mode->resource
+  {"multiple-choice"   "interactivity-content.edn"
+   "quiz"              "interactivity-content.edn"
+   "sentence-ordering" "interactivity-sentence-ordering-content.edn"})
+
+(defn get-conversation-template
+  ([type] (get-conversation-template type nil))
+  ([type mode]
+   (case type
+     :edit          (-> (io/resource "conversation-edit-content.edn") slurp edn/read-string)
+     :interactivity (-> (io/resource (get interactivity-mode->resource mode "interactivity-content.edn")) slurp edn/read-string)
+     :conversation  (-> (io/resource "conversation-content.edn") slurp edn/read-string)
+     ;; unrecognized type falls back to the normal conversation template
+     (-> (io/resource "conversation-content.edn") slurp edn/read-string))))
 
 
 
@@ -289,8 +296,8 @@
   (log/debug "generate-interactivity req" req)
   (report-progress! on-progress :starting)
 
-  (let [interactivity-config (get-conversation-template :interactivity)
-        mode                 (get-in req [:interactivity :mode])
+  (let [mode                 (get-in req [:interactivity :mode])
+        interactivity-config (get-conversation-template :interactivity mode)
 
         _ (report-progress! on-progress :thinking)
 

@@ -6,8 +6,9 @@
             [teachers-center-backend.db :as db]))
 
 (def mode->template
-  {"quiz"            "games/quiz.html"
-   "multiple-choice" "games/quiz.html"})
+  {"quiz"              "games/quiz.html"
+   "multiple-choice"   "games/quiz.html"
+   "sentence-ordering" "games/sentence-ordering.html"})
 
 (defn- safe-json [data]
   (-> (json/generate-string data)
