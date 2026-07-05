@@ -9,7 +9,8 @@
   {"quiz"              "games/quiz.html"
    "multiple-choice"   "games/quiz.html"
    "sentence-ordering" "games/sentence-ordering.html"
-   "guess-the-word"    "games/guess-the-word.html"})
+   "guess-the-word"    "games/guess-the-word.html"
+   "true-false"        "games/true-false.html"})
 
 (defn- safe-json [data]
   (-> (json/generate-string data)
