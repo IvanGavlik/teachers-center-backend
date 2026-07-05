@@ -171,7 +171,8 @@
 (def interactivity-mode->resource
   {"multiple-choice"   "interactivity-content.edn"
    "quiz"              "interactivity-content.edn"
-   "sentence-ordering" "interactivity-sentence-ordering-content.edn"})
+   "sentence-ordering" "interactivity-sentence-ordering-content.edn"
+   "guess-the-word"    "interactivity-guess-the-word-content.edn"})
 
 (defn get-conversation-template
   ([type] (get-conversation-template type nil))

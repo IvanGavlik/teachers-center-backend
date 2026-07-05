@@ -8,7 +8,8 @@
 (def mode->template
   {"quiz"              "games/quiz.html"
    "multiple-choice"   "games/quiz.html"
-   "sentence-ordering" "games/sentence-ordering.html"})
+   "sentence-ordering" "games/sentence-ordering.html"
+   "guess-the-word"    "games/guess-the-word.html"})
 
 (defn- safe-json [data]
   (-> (json/generate-string data)
