@@ -19,6 +19,9 @@
   (ig-repl/go))
 
 
+(defn get-openai-client []
+  (:teachers-center-backend/openai-client state/system))
+
 (defn clear-and-go [] ;; TODO this does not work
   (alter-var-root #'state/system (constantly nil))
   (alter-var-root #'state/config (constantly nil))

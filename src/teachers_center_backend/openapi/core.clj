@@ -43,6 +43,58 @@
                        :cause-type (class e)
                        :error-code :network-error} e)))))
 
+(defn get-request [client endpoint query-params]
+  (try
+    (let [url (str (:base-url client) endpoint)
+          response (http/get url
+                             {:headers {"Authorization" (str "Bearer " (:api-key client))}
+                              :query-params query-params
+                              :throw-exceptions false
+                              :cookie-policy :standard
+                              :timeout 60000})]
+      (if (= 200 (:status response))
+        (json/parse-string (:body response) true)
+        (do
+          (log/error "OpenAI API error response" {:status (:status response)
+                                                   :body (:body response)})
+          (throw (ex-info "OpenAI API returned error"
+                          {:status     (:status response)
+                           :body       (:body response)
+                           :error-code (classify-openai-error (:status response))})))))
+    (catch Exception e
+      (log/error e "OpenAI API request failed" {:message (.getMessage e)
+                                                 :class (class e)})
+      (throw (ex-info "OpenAI API request failed"
+                      {:error      (.getMessage e)
+                       :cause-type (class e)
+                       :error-code :network-error} e)))))
+
+(defn upload-request [client endpoint parts]
+  (try
+    (let [url (str (:base-url client) endpoint)
+          response (http/post url
+                              {:headers {"Authorization" (str "Bearer " (:api-key client))}
+                               :multipart parts
+                               :throw-exceptions false
+                               :cookie-policy :standard
+                               :timeout 60000})]
+      (if (= 200 (:status response))
+        (json/parse-string (:body response) true)
+        (do
+          (log/error "OpenAI API error response" {:status (:status response)
+                                                   :body (:body response)})
+          (throw (ex-info "OpenAI API returned error"
+                          {:status     (:status response)
+                           :body       (:body response)
+                           :error-code (classify-openai-error (:status response))})))))
+    (catch Exception e
+      (log/error e "OpenAI API request failed" {:message (.getMessage e)
+                                                 :class (class e)})
+      (throw (ex-info "OpenAI API request failed"
+                      {:error      (.getMessage e)
+                       :cause-type (class e)
+                       :error-code :network-error} e)))))
+
 (defn chat-completion [client messages {:keys [model temperature max-tokens]}]
   (make-request client "/chat/completions"
                 {:model (or model "gpt-4")
