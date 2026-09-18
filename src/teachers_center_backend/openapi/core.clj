@@ -108,11 +108,13 @@
    - :instructions          system prompt string (must be resent on every call; not carried forward)
    - :input                 the user's message string
    - :previous-response-id  id from the prior response to continue a conversation; nil to start fresh
+   - :vector-store-ids      optional coll of vector-store ids; when non-empty, attaches the file_search
+                            tool so the model can ground its answer in those documents
    config map keys:
    - :model                 defaults to gpt-4o
    - :temperature
    - :max-output-tokens"
-  [client {:keys [instructions input previous-response-id]} {:keys [model temperature max-output-tokens store]
+  [client {:keys [instructions input previous-response-id vector-store-ids]} {:keys [model temperature max-output-tokens store]
                                                               :or   {store true}}]
   (let [payload (cond-> {:model        (or model "gpt-4o")
                          :instructions instructions
@@ -123,15 +125,27 @@
                          :store        store}
                   temperature          (assoc :temperature temperature)
                   max-output-tokens    (assoc :max_output_tokens max-output-tokens)
-                  previous-response-id (assoc :previous_response_id previous-response-id))]
+                  previous-response-id (assoc :previous_response_id previous-response-id)
+                  (seq vector-store-ids) (assoc :tools [{:type "file_search" :vector_store_ids vector-store-ids}]))]
     (make-request client "/responses" payload)))
 
 (defn response-output-text
   "Extract the assistant text from a Responses API response.
    output_text is an SDK convenience accessor — it is not present in the raw HTTP JSON.
-   The text lives at response.output[0].content[0].text"
+
+   The text does NOT reliably live at response.output[0] — when a tool (e.g. file_search) is
+   attached, OpenAI puts the tool-call item(s) into :output BEFORE the final message item:
+     \"output\": [
+       { \"type\": \"file_search_call\", \"id\": \"fs_...\", \"queries\": [...], \"results\": [...] },
+       { \"type\": \"message\", \"content\": [{ \"type\": \"output_text\", \"text\": \"...\" }] }
+     ]
+   so we must find the :message item rather than assume it's first."
   [response]
-  (-> response :output first :content first :text))
+  (let [output       (:output response)
+        message-item (some #(when (= (:type %) "message") %) output)]
+    (when-not message-item
+      (log/warn "No message item found in Responses API output" {:output-types (mapv :type output)}))
+    (-> message-item :content first :text)))
 
 (comment
   ;; REPL test for responses-api

@@ -187,16 +187,21 @@
 
 
 
+(def file-search-instruction
+  "A reference document has been attached via file_search — prioritize it over general knowledge when relevant.")
+
 (defn ask-responses-api
-  [openapi-client conversation-config request-msg settings previous-response-id]
+  [openapi-client conversation-config request-msg settings previous-response-id book-ids]
   (let [rendered     (content/render-content conversation-config (merge settings {:request request-msg}))
-        instructions (:instructions rendered)
+        instructions (cond-> (:instructions rendered)
+                       (seq book-ids) (str "\n\n" file-search-instruction))
         input        (:user rendered)
         config       (:config rendered)]
     (openai/responses-api openapi-client
                           {:instructions         instructions
                            :input                input
-                           :previous-response-id previous-response-id}
+                           :previous-response-id previous-response-id
+                           :vector-store-ids     book-ids}
                           config)))
 
 
@@ -229,7 +234,8 @@
 
         ;; Edit is always one-shot — no conversation chain, so previous-response-id is nil
         settings (:requirements req)
-        res (ask-responses-api open-api-client conversation-config combined-request settings nil)
+        book-ids (:book-ids req)
+        res (ask-responses-api open-api-client conversation-config combined-request settings nil book-ids)
 
         _ (report-progress! on-progress :polishing)
 
@@ -279,7 +285,8 @@
         _ (report-progress! on-progress :creating)
 
         settings (:requirements req)
-        res (ask-responses-api open-api-client conversation-config request-msg settings previous-response-id)
+        book-ids (:book-ids req)
+        res (ask-responses-api open-api-client conversation-config request-msg settings previous-response-id book-ids)
 
         _ (db/save-last-response-id! conversation-id (:id res))
         _ (report-progress! on-progress :polishing)
@@ -311,7 +318,8 @@
         _ (report-progress! on-progress :creating)
 
         settings             (:requirements req)
-        res                  (ask-responses-api open-api-client interactivity-config request-msg settings previous-response-id)
+        book-ids             (:book-ids req)
+        res                  (ask-responses-api open-api-client interactivity-config request-msg settings previous-response-id book-ids)
 
         _ (db/save-last-response-id! conversation-id (:id res))
         _ (report-progress! on-progress :polishing)

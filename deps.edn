@@ -6,6 +6,7 @@
         http-kit/http-kit {:mvn/version "2.3.0"}
         ring/ring-core {:mvn/version "1.10.0"}
         ring/ring-json {:mvn/version "0.5.1"}
+        javax.servlet/javax.servlet-api {:mvn/version "4.0.1"} ; ring.middleware.multipart-params needs this at compile time even though we never run under a servlet container
         compojure/compojure {:mvn/version "1.7.0"}
         ring-cors/ring-cors {:mvn/version "0.1.13"}
         

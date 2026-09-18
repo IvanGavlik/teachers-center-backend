@@ -10,7 +10,9 @@
 (defmethod ig/init-key :teachers-center-backend/server
   [_ {:keys [port handler]}]
   (println (str "Starting server on port " port))
-  (server/run-server handler {:port port :join? false}))
+  ;; http-kit's default :max-body is 8MB — below our own 20MB PDF-upload limit
+  ;; (teachers-center-backend.library), so it must be raised here too.
+  (server/run-server handler {:port port :join? false :max-body (* 25 1024 1024)}))
 
 (defmethod ig/halt-key! :teachers-center-backend/server
   [_ server]

@@ -32,6 +32,7 @@
                                                 age)))
                         :edit (:edit parsed-msg)
                         :interactivity (:interactivity parsed-msg)
+                        :book-ids (:book-ids parsed-msg [])
                         }
           on-progress (make-progress-sender send-fn)
           response (conversation/conversation open-api-client request-data on-progress)

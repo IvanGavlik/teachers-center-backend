@@ -1,7 +1,6 @@
 (ns teachers-center-backend.openapi.file-search
   (:require [teachers-center-backend.openapi.core :as openai-client]
-            [clojure.java.io :as io]
-            [dev :as dev]))
+            [clojure.java.io :as io]))
 
 ; Cretea/Upload file and pass that id to the create vector store
 ; one pdf per vector store (pdf is automatically parsed and indexed when added to the store)
@@ -29,13 +28,25 @@
      (openai-client/get-request client "/vector_stores" query-params))))
 
 (defn upload-file
-  [client {:keys [file-path purpose] :or {purpose "assistants"}}]
+  ;; clj-http's multipart support for File content only honors a custom filename
+  ;; when :mime-type is ALSO present (see clj-http.multipart/make-multipart-body's File
+  ;; dispatch) — and it reads the filename from :name, not :filename. :part-name is what
+  ;; sets the actual multipart field name ("file"), independent of the displayed filename.
+  ;; Without :mime-type, clj-http falls back to a constructor that ignores the filename
+  ;; entirely and uses the underlying File object's own name — which for an HTTP-uploaded
+  ;; file is a meaningless Ring tempfile name like "ring-multipart-....tmp", and OpenAI's
+  ;; /files endpoint rejects unrecognized extensions.
+  [client {:keys [file-path purpose filename mime-type] :or {purpose "assistants"}}]
   (let [file (io/file file-path)]
     (openai-client/upload-request client "/files"
-                                  [{:name "file" :content file :filename (.getName file)}
+                                  [{:part-name "file"
+                                    :name      (or filename (.getName file))
+                                    :mime-type (or mime-type "application/octet-stream")
+                                    :content   file}
                                    {:name "purpose" :content purpose}])))
 
 (comment
+  (require '[dev :as dev])
   (def test-client (dev/get-openai-client))                 ; for repl
 
   (def uploaded-file (upload-file test-client {:file-path "resources/deep_research_blog.pdf"}))

@@ -4,10 +4,12 @@
             [clojure.tools.logging :as log]
             [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
             [ring.middleware.cors :refer [wrap-cors]]
+            [ring.middleware.multipart-params :refer [wrap-multipart-params]]
             [ring.util.response :refer [response]]
             [org.httpkit.server :refer [with-channel send! on-close on-receive]] ; web socket
             [teachers-center-backend.conversation.ws :as conversation-ws]
             [teachers-center-backend.email-logger :as email-logger]
+            [teachers-center-backend.library :as library]
             [teachers-center-backend.game :as game]))
 
 (defn health-handler [_]
@@ -43,6 +45,8 @@
   (GET "/health" [] health-handler)
   (GET "/ws" [] (fn [request] (ws-handler (:openapi-client request) request)))
   (POST "/feedback" [] feedback-handler)
+  (POST "/library/upload" [] library/upload-handler)
+  (GET "/library/book-status/:id" [id :as request] (library/status-handler request id))
   (GET "/game/:activity-id" [activity-id] (game/game-handler activity-id))
   (route/not-found {:success false :error "Route not found"}))
 
@@ -54,6 +58,7 @@
                                      :openapi-client openai-client))))]
     (-> app-routes
         inject
+        wrap-multipart-params
         (wrap-json-body {:keywords? true})
         wrap-json-response
         (wrap-cors
