@@ -196,13 +196,26 @@
         instructions (cond-> (:instructions rendered)
                        (seq book-ids) (str "\n\n" file-search-instruction))
         input        (:user rendered)
-        config       (:config rendered)]
-    (openai/responses-api openapi-client
-                          {:instructions         instructions
-                           :input                input
-                           :previous-response-id previous-response-id
-                           :vector-store-ids     book-ids}
-                          config)))
+        config       (:config rendered)
+        res          (openai/responses-api openapi-client
+                                            {:instructions         instructions
+                                             :input                input
+                                             :previous-response-id previous-response-id
+                                             :vector-store-ids     book-ids}
+                                            config)]
+    ;; INFO (not debug — root log level is INFO, see resources/logback.xml, so a :debug log
+    ;; here would silently never appear) proof of whether file_search actually fired and cited
+    ;; anything: a "file_search_call" item in :output means the tool was invoked; :annotations
+    ;; on the message's output_text (file_citation entries with our file_id) means the answer
+    ;; actually drew on the attached document, not just the model's own parametric knowledge.
+    (when (seq book-ids)
+      (log/info "file_search debug"
+                {:book-ids     book-ids
+                 :output-types (mapv :type (:output res))
+                 :citations    (->> (:output res)
+                                    (some #(when (= (:type %) "message") %))
+                                    :content first :annotations)}))
+    res))
 
 
 (defn edit-slide
