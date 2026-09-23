@@ -256,6 +256,71 @@ The content is the same in each case. Only the drawing changes, and the drawing 
 3. **Frontend:** the six layout drawers on PptxGenJS, with the old desktop drawing code (`createSlideContent`) removed.
 4. **Preview** in the sidebar that matches the real slide, reusing the same layout geometry.
 
+### 5.9 Which layout approach to use: cards vs. constraints vs. structured templates
+
+The three tools in 5.7 stand for three ways of handling layout: **Gamma's flexible cards**, **Beautiful.ai's strong constraints ("Smart Slides")** and **Presenton's structured templates**.
+
+**One limit decides most of this.** Our output is **ordinary PowerPoint slides**: a fixed 16:9 or 4:3 page that the teacher edits after insert, with no engine of ours running afterwards. Gamma and Beautiful.ai both rely on their own editor staying in charge after generation. Our add-in hands control to PowerPoint the moment it inserts.
+
+#### 1. Flexible cards (Gamma)
+Content goes into cards that grow taller as needed, and layout adapts to the content.
+
+**Pros**
+- Almost never overflows, because the card grows.
+- Very forgiving of whatever the AI produces.
+- Restyling the whole deck in one click works well.
+
+**Cons**
+- **Doesn't fit PowerPoint:** a slide can't grow. Projected in a classroom, a card cut to 16:9 is just an overfull slide.
+- Relies on Gamma's own viewer and editor, which we don't have.
+- Gamma itself flattens cards into slides when exporting to PPTX, and that's where its output looks worst.
+
+**Verdict:** don't use it as the base. The one idea worth keeping, restyling without touching content, we already get from theme colours (5.1).
+
+#### 2. Strong constraints / Smart Slides (Beautiful.ai)
+A rules engine owns the layout. It resizes and realigns live as content changes, refuses too much content, and users can't break the design.
+
+**Pros**
+- Consistently professional results; the rules can't be overridden.
+- Stops overcrowded slides, which suits a classroom ("one idea per slide", which is already in our prompt).
+
+**Cons**
+- **The live resizing can't be rebuilt:** once a slide is in PowerPoint, nothing of ours re-runs when the teacher edits it.
+- Building a real rules engine means measuring text, which Office.js and PptxGenJS can't do reliably.
+- Rigid for teachers who want to tweak things (though in PowerPoint they can always move shapes anyway).
+
+**Verdict:** take the **rules**, not the engine. Enforce limits **when content is generated** (schema maximums), not while the teacher edits.
+
+#### 3. Structured templates (Presenton)
+A fixed list of layouts, each with an ID and a schema with hard limits. The AI picks a layout and fills in its fields, and a template draws it.
+
+**Pros**
+- **Fits our setup exactly:** we generate once, draw once, and the result is ordinary editable PowerPoint.
+- OpenAI structured output (strict `json_schema`) can enforce the schema. That removes today's "parsing just throws" problem.
+- Cheap to extend: adding a layout means one schema entry plus one drawing function.
+- Easy to test: a fixed input gives a predictable slide.
+- Sets up later features: per-slide "Change layout", and image areas for Option 2.
+
+**Cons**
+- Only as good as its list of layouts. Content that fits none of them gets forced into one (fall back to `bullets`).
+- Slides can look template-like if there are too few layouts or they're too plain.
+- Limits sometimes make the AI shorten or reword content. Mitigation: allow "split into two slides" rather than cutting.
+- Writing the prompt and schema takes work up front: six layouts, each with fields and limits.
+
+**Verdict:** use this as the base.
+
+#### Recommendation: structured templates, with Beautiful.ai-style limits
+
+| Take from | What | How in our code |
+|---|---|---|
+| **Presenton** (base) | Layout ID + schema per layout, AI picks and fills | `layout` enum + strict `json_schema` in `conversation-content.edn` / `openapi/core.clj`; six drawing functions in PptxGenJS |
+| **Beautiful.ai** | Hard limits and "too much content" guards | `maxItems`/`maxLength` in the schema, plus a prompt rule: split into two slides rather than overfill |
+| **Gamma** | Restyle without touching content | Theme colour slots + `UseDestinationTheme`, so the teacher's theme drives the look |
+
+This is the design already described in 5.1–5.6; the three tools just confirm it. The risky part isn't the approach, it's two unknowns:
+1. **Whether theme colours really come through when inserting on desktop and web.** That's the one-hour test in 5.8, step 1.
+2. **Whether six layouts are enough for real teacher requests.** Check this cheaply: run 20–30 real requests from the email logs through the new prompt and see how often the AI falls back to `bullets`.
+
 ---
 
 ## Recommendation (if a starting point is wanted later)
