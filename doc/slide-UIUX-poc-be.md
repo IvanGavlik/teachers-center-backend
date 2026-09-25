@@ -19,7 +19,7 @@ Branch: **`poc/slide-layouts`** in this repo. The old `{slide-title, content}` f
 **Bug fixed along the way:** the "Native Language Rule" never received the setting, because there was no placeholder for it. Translations never worked before this change.
 
 ### Wire format (backend → add-in)
-The message types are unchanged: `{requirements-not-met, conversation-id}`, `{title, subtitle, slides, conversation-id}`, `{type:"edit", edit:{slideIndex, slide}}`. Each slide is one of:
+The message types are unchanged: `{requirements-not-met, conversation-id}`, `{title, slides, conversation-id}` (no `subtitle` any more), `{type:"edit", edit:{slideIndex, slide}}`. Each slide is one of:
 
 | `layout` | Fields | Limits |
 |---|---|---|
@@ -100,7 +100,7 @@ Second run, after the polarity fix:
 1. **Translations only fit in the `examples` layout.** Decks with a native language set but no `examples` slide get no translations: 2 of 7 in the first run. Options:
    - Add `translation` to comparison and pattern items as well.
    - Tell the prompt to include at least one `examples` slide when a native language is set.
-2. **The subtitle's slide count can disagree with `slides`.** `no-count` said "5 slides" and returned 2. The backend could build the subtitle itself from the level and `(count slides)`.
+2. ~~**The subtitle's slide count can disagree with `slides`.**~~ Resolved: the deck no longer has a subtitle ("Level: X | N slides" was prompt-only). The title slide shows just the title; the future renderer must skip the subtitle box when `subtitle` is missing.
 3. **A missing slide count doesn't always trigger clarification.** This is existing prompt behaviour and hasn't changed.
 4. **Add-in, comparison rows:** the add-in takes the row count from `left.items`, so any extra `right` items are dropped. The eval found no uneven comparisons, but the real renderer should use the max of both sides.
 5. **The eval requests are drafted.** They should be swapped for real requests from the email logs before drawing firm conclusions.

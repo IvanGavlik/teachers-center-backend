@@ -6,7 +6,6 @@
 (def typical
   {:requirements-not-met nil
    :title    "Present Simple: Negatives"
-   :subtitle "Level: B1 | 5 slides"
    :slides
    [{:layout "bullets" :slide-title "When do we use it?"
      :items ["Facts that are always true" "Habits and daily routines" "Things we don't like or don't do"]}
@@ -63,11 +62,11 @@
 
 (deftest clarification-branch
   (is (= {:requirements-not-met "Which topic?"}
-         (ss/normalize-deck {:requirements-not-met "Which topic?" :title nil :subtitle nil :slides nil}))))
+         (ss/normalize-deck {:requirements-not-met "Which topic?" :title nil :slides nil}))))
 
 (deftest empty-answer-is-an-error
   (is (thrown? clojure.lang.ExceptionInfo
-               (ss/normalize-deck {:requirements-not-met nil :title nil :subtitle nil :slides nil}))))
+               (ss/normalize-deck {:requirements-not-met nil :title nil :slides nil}))))
 
 (deftest highlight-repair
   (let [ex (fn [h] (-> (ss/normalize-slide {:layout "examples" :slide-title "t"

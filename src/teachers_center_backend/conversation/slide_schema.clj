@@ -106,10 +106,9 @@
 (def deck-schema
   (obj {:requirements-not-met (nullable-string "The single clarification question when the request is not specific enough; otherwise null.")
         :title                (nullable-string "Deck title; null when asking for clarification.")
-        :subtitle             (nullable-string "Deck subtitle, e.g. \"Level: B1 | 6 slides\"; null when asking for clarification.")
         :slides               {:type        ["array" "null"]
                                :items       slide-schema
-                               :description "The content slides (the title slide is built from title/subtitle); null when asking for clarification."}}))
+                               :description "The content slides (the title slide is built from title); null when asking for clarification."}}))
 
 ;; Strict mode does not allow anyOf at the root, so an edited slide is wrapped.
 (def edit-schema
@@ -226,7 +225,7 @@
 
 (defn normalize-deck
   "Strict output always carries all root fields; keep only the branch that applies so the wire
-   shape matches what the add-in dispatches on: {:requirements-not-met q} or {:title :subtitle :slides}."
+   shape matches what the add-in dispatches on: {:requirements-not-met q} or {:title :slides}."
   [{:keys [requirements-not-met slides] :as deck}]
   (cond
     (not (str/blank? requirements-not-met))
@@ -237,7 +236,6 @@
       (when (seq v)
         (log/warn "slide soft-limit violations" {:count (count v) :violations v}))
       {:title    (:title deck)
-       :subtitle (:subtitle deck)
        :slides   (mapv normalize-slide slides)})
 
     :else

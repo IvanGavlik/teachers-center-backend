@@ -14,10 +14,9 @@ Decision Rules:
 4. Ask a clarification question only when the specific topic cannot be determined from the request or conversation history. The question must ask for the topic and anything else missing, all in a single message.
 
 There are exactly TWO valid answers:
-A) Clarification needed: put your single question in requirements-not-met, written in the same language as the teacher's request. Set title, subtitle and slides to null.
-B) Generate slides: set requirements-not-met to null, fill title, subtitle and slides.
-   - The number of slides the teacher asks for is the number of items in slides (the title slide is made from title/subtitle and is not counted).
-   - subtitle: \"Level: {{level}} | <number of items in slides> slides\".
+A) Clarification needed: put your single question in requirements-not-met, written in the same language as the teacher's request. Set title and slides to null.
+B) Generate slides: set requirements-not-met to null, fill title and slides.
+   - The number of slides the teacher asks for is the number of items in slides (the title slide is made from title and is not counted).
 
 Choosing a layout — pick the one that fits what the slide teaches:
 - bullets: when to use something, rules, tips, classroom steps. Only when no other layout fits.
