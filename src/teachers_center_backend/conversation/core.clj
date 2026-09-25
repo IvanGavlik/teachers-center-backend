@@ -1,6 +1,7 @@
 (ns teachers-center-backend.conversation.core
   (:require [teachers-center-backend.openapi.core :as openai]
             [teachers-center-backend.content :as content]
+            [teachers-center-backend.conversation.slide-schema :as slide-schema]
             [teachers-center-backend.db :as db]
             [clojure.edn :as edn]
             [cheshire.core :as json]
@@ -186,9 +187,11 @@
      (-> (io/resource "conversation-content.edn") slurp edn/read-string))))
 
 
-
+; TODO should this be in the edn file what about edit mode
 (def file-search-instruction
-  "A reference document has been attached via file_search — prioritize it over general knowledge when relevant.")
+  "A reference document has been attached via file_search — prioritize it over general knowledge when relevant.
+When the teacher refers to the attached document (e.g. \"from the document\", \"from the book\", \"chapter 3\"), the document's content counts as a specific topic: search it and build the slides from what you find — do not ask for the topic.
+Search for the document's subject matter and key terms, not for the words of the request: for \"vocabulary from the document\" search what the document is about and pick its important words yourself — any document contains vocabulary. The other decision rules (e.g. the number of slides) still apply.")
 
 (defn ask-responses-api
   [openapi-client conversation-config request-msg settings previous-response-id book-ids]
@@ -197,24 +200,23 @@
                        (seq book-ids) (str "\n\n" file-search-instruction))
         input        (:user rendered)
         config       (:config rendered)
+        ;; templates that name a :response-schema get strict structured output; the rest
+        ;; (interactivity) keep plain JSON-in-text as before
+        text-format  (some-> (:response-schema config) slide-schema/text-format)
         res          (openai/responses-api openapi-client
                                             {:instructions         instructions
                                              :input                input
                                              :previous-response-id previous-response-id
-                                             :vector-store-ids     book-ids}
+                                             :vector-store-ids     book-ids
+                                             :text-format          text-format}
                                             config)]
     ;; INFO (not debug — root log level is INFO, see resources/logback.xml, so a :debug log
-    ;; here would silently never appear) proof of whether file_search actually fired and cited
-    ;; anything: a "file_search_call" item in :output means the tool was invoked; :annotations
-    ;; on the message's output_text (file_citation entries with our file_id) means the answer
-    ;; actually drew on the attached document, not just the model's own parametric knowledge.
+    ;; here would silently never appear) proof of whether file_search actually fired and what it
+    ;; retrieved. Citations are always 0 for strict structured output (slides/edit), so the
+    ;; queries and retrieved passages are the evidence the answer could draw on the document.
     (when (seq book-ids)
       (log/info "file_search debug"
-                {:book-ids     book-ids
-                 :output-types (mapv :type (:output res))
-                 :citations    (->> (:output res)
-                                    (some #(when (= (:type %) "message") %))
-                                    :content first :annotations)}))
+                (assoc (openai/file-search-summary res) :book-ids book-ids)))
     res))
 
 
@@ -256,10 +258,10 @@
         _ (log/debug "edit-slide response:" res-content)
         res-data (json/parse-string res-content true)]
 
-    ;; Wrap response in edit format
+    ;; Strict output wraps the slide ({:slide {...}}) because the schema root can't be anyOf
     {:type "edit"
      :edit {:slideIndex slide-index
-            :slide res-data}}))
+            :slide (slide-schema/normalize-slide (:slide res-data))}}))
 
 ; TODO NEXT WRITE FEW tests for few conversations to see how this will work
 ; explore ask more info, see preview, final answer (also the starting new conversation)
@@ -306,7 +308,7 @@
 
         res-content (openai/response-output-text res)
         _ (log/debug "res-content " res-content)
-        res-data (json/parse-string res-content true)]
+        res-data (slide-schema/normalize-deck (json/parse-string res-content true))]
     (if (:requirements-not-met res-data)
       (log/debug "mark conversation as not done")
       (log/debug "mark conversation as done"))

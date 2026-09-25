@@ -110,11 +110,13 @@
    - :previous-response-id  id from the prior response to continue a conversation; nil to start fresh
    - :vector-store-ids      optional coll of vector-store ids; when non-empty, attaches the file_search
                             tool so the model can ground its answer in those documents
+   - :text-format           optional structured-output format, e.g.
+                            {:type \"json_schema\" :name \"...\" :strict true :schema {...}}
    config map keys:
    - :model                 defaults to gpt-4o
    - :temperature
    - :max-output-tokens"
-  [client {:keys [instructions input previous-response-id vector-store-ids]} {:keys [model temperature max-output-tokens store]
+  [client {:keys [instructions input previous-response-id vector-store-ids text-format]} {:keys [model temperature max-output-tokens store]
                                                               :or   {store true}}]
   (let [payload (cond-> {:model        (or model "gpt-4o")
                          :instructions instructions
@@ -126,7 +128,11 @@
                   temperature          (assoc :temperature temperature)
                   max-output-tokens    (assoc :max_output_tokens max-output-tokens)
                   previous-response-id (assoc :previous_response_id previous-response-id)
-                  (seq vector-store-ids) (assoc :tools [{:type "file_search" :vector_store_ids vector-store-ids}]))]
+                  (seq vector-store-ids) (assoc :tools [{:type "file_search" :vector_store_ids vector-store-ids}]
+                                                ;; without this, file_search_call items carry the queries but
+                                                ;; :results is null — we log the retrieved passages as proof of use
+                                                :include ["file_search_call.results"])
+                  text-format          (assoc :text {:format text-format}))]
     (make-request client "/responses" payload)))
 
 (defn response-output-text
@@ -142,10 +148,43 @@
    so we must find the :message item rather than assume it's first."
   [response]
   (let [output       (:output response)
-        message-item (some #(when (= (:type %) "message") %) output)]
+        message-item (some #(when (= (:type %) "message") %) output)
+        content      (-> message-item :content first)]
     (when-not message-item
       (log/warn "No message item found in Responses API output" {:output-types (mapv :type output)}))
-    (-> message-item :content first :text)))
+    ;; With strict structured output a truncated answer (max_output_tokens hit) is broken JSON,
+    ;; and a refusal comes back as {:type "refusal"} instead of output_text — fail loudly for both.
+    (when (= "incomplete" (:status response))
+      (throw (ex-info "OpenAI response incomplete"
+                      {:error-code :api-error
+                       :reason     (get-in response [:incomplete_details :reason])})))
+    (when (= "refusal" (:type content))
+      (throw (ex-info "OpenAI refused the request"
+                      {:error-code :api-error
+                       :refusal    (:refusal content)})))
+    (:text content)))
+
+(defn file-search-summary
+  "What file_search did in a Responses API response, for logging.
+   Strict structured output (text.format json_schema) returns no file_citation annotations, so
+   the retrieved passages are the evidence that the answer could draw on the attached document.
+   :results is only populated when the request asked for include [\"file_search_call.results\"]."
+  [response]
+  (let [calls   (filter #(= (:type %) "file_search_call") (:output response))
+        results (mapcat :results calls)]
+    {:searched?    (boolean (seq calls))
+     :queries      (vec (mapcat :queries calls))
+     :result-count (count results)
+     :top-results  (->> results
+                        (sort-by :score >)
+                        (take 3)
+                        (mapv (fn [{:keys [filename score text]}]
+                                {:filename filename
+                                 :score    (some-> score double (* 100) Math/round (/ 100.0))
+                                 :text     (some-> text (subs 0 (min 120 (count text))))})))
+     :citations    (->> (:output response)
+                        (some #(when (= (:type %) "message") %))
+                        :content first :annotations count)}))
 
 (comment
   ;; REPL test for responses-api

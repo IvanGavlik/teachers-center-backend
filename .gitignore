@@ -17,3 +17,5 @@ Thumbs.db
 
 # Logs
 *.log
+# Eval output (POC 2)
+dev/eval/out/

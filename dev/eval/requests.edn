@@ -1,0 +1,68 @@
+;; POC 2 eval set — realistic teacher requests (drafted, not from logs; swap in real ones later).
+;; :expect  :slides  → should generate a deck
+;;          :clarify → should ask a clarification question
+{:generate
+ [;; ── English ──
+  {:id :en-a1-to-be       :language "English" :level "A1" :age-group "children"  :native-language "No"       :expect :slides
+   :content "verb to be (am, is, are), 4 slides"}
+  {:id :en-a2-past-simple :language "English" :level "A2" :age-group "teenagers" :native-language "No"       :expect :slides
+   :content "Past simple regular and irregular verbs - 6 slides please"}
+  {:id :en-b1-present-perfect :language "English" :level "B1" :age-group "adults" :native-language "Croatian" :expect :slides
+   :content "present perfect vs past simple, 5 slides, lots of examples"}
+  {:id :en-b1-food-vocab  :language "English" :level "B1" :age-group "teenagers" :native-language "No"       :expect :slides
+   :content "food and cooking vocabulary, 5 slides"}
+  {:id :en-b2-conditionals :language "English" :level "B2" :age-group "adults"   :native-language "No"       :expect :slides
+   :content "Second and third conditional. 6 slides. Include common mistakes."}
+  {:id :en-c1-linkers     :language "English" :level "C1" :age-group "adults"    :native-language "No"       :expect :slides
+   :content "linking words for formal essays (however, moreover, nevertheless...), 4 slides"}
+  {:id :en-a2-much-many   :language "English" :level "A2" :age-group "children"  :native-language "No"       :expect :slides
+   :content "much vs many with countable and uncountable nouns 3 slides"}
+  ;; ── German ──
+  {:id :de-a1-articles    :language "German"  :level "A1" :age-group "adults"    :native-language "English"  :expect :slides
+   :content "Bestimmte Artikel der, die, das — 4 Folien"}
+  {:id :de-a2-separable   :language "German"  :level "A2" :age-group "teenagers" :native-language "No"       :expect :slides
+   :content "separable verbs (trennbare Verben) in present tense, 5 slides"}
+  {:id :de-b1-dativ-prep  :language "German"  :level "B1" :age-group "adults"    :native-language "Croatian" :expect :slides
+   :content "Wechselpräpositionen mit Akkusativ und Dativ, 6 Folien"}
+  {:id :de-b2-passive     :language "German"  :level "B2" :age-group "adults"    :native-language "No"       :expect :slides
+   :content "Passiv im Präsens und Präteritum, 5 slides"}
+  ;; ── Spanish ──
+  {:id :es-a1-ser-estar   :language "Spanish" :level "A1" :age-group "teenagers" :native-language "English"  :expect :slides
+   :content "ser vs estar, 5 slides"}
+  {:id :es-a2-family      :language "Spanish" :level "A2" :age-group "children"  :native-language "No"       :expect :slides
+   :content "family members vocabulary - 3 slides"}
+  {:id :es-b1-subjunctive :language "Spanish" :level "B1" :age-group "adults"    :native-language "No"       :expect :slides
+   :content "presente de subjuntivo after querer que / esperar que, 5 diapositivas"}
+  ;; ── French ──
+  {:id :fr-a1-numbers     :language "French"  :level "A1" :age-group "children"  :native-language "No"       :expect :slides
+   :content "numbers 1-20 and how to say your age, 3 slides"}
+  {:id :fr-a2-passe-compose :language "French" :level "A2" :age-group "adults"   :native-language "English"  :expect :slides
+   :content "passé composé avec avoir et être, 6 slides"}
+  {:id :fr-b1-pronouns    :language "French"  :level "B1" :age-group "teenagers" :native-language "No"       :expect :slides
+   :content "pronoms y et en, 4 slides"}
+  ;; ── Italian ──
+  {:id :it-a1-greetings   :language "Italian" :level "A1" :age-group "adults"    :native-language "No"       :expect :slides
+   :content "greetings and introductions, 4 slides"}
+  {:id :it-b1-imperfetto  :language "Italian" :level "B1" :age-group "adults"    :native-language "Croatian" :expect :slides
+   :content "imperfetto vs passato prossimo, 5 slides"}
+  ;; ── Teacher written in their own language ──
+  {:id :hr-en-b1-modals   :language "English" :level "B1" :age-group "teenagers" :native-language "Croatian" :expect :slides
+   :content "Napravi 5 slajdova o modalnim glagolima can, must, have to"}
+  {:id :en-b1-lesson-travel :language "English" :level "B1" :age-group "adults"  :native-language "No"       :expect :slides
+   :content "a lesson about travel: airport vocabulary and asking for directions, 6 slides"}
+  ;; ── Should ask for clarification ──
+  {:id :vague-verbs       :language "English" :level "B1" :age-group "teenagers" :native-language "No"       :expect :clarify
+   :content "make slides about verbs"}
+  {:id :vague-something   :language "German"  :level "A2" :age-group "adults"    :native-language "No"       :expect :clarify
+   :content "something for tomorrow's class"}
+  {:id :no-count          :language "Spanish" :level "A2" :age-group "adults"    :native-language "No"       :expect :clarify
+   :content "reflexive verbs"}
+  {:id :vague-grammar-hr  :language "English" :level "A2" :age-group "children"  :native-language "No"       :expect :clarify
+   :content "treba mi gramatika"}]
+
+ ;; Edits run against a slide of a deck generated above.
+ ;; :slide picks the first slide with that layout (falls back to slide 0).
+ :edit
+ [{:id :edit-to-table     :deck :en-b1-food-vocab     :slide "bullets"    :content "make this a table"}
+  {:id :edit-add-example  :deck :en-a2-past-simple    :slide "examples"   :content "add one more example with the verb 'go'"}
+  {:id :edit-to-comparison :deck :de-a2-separable     :slide "bullets"    :content "show correct and wrong sentences instead"}]}
