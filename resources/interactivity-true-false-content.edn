@@ -1,6 +1,6 @@
 {:instructions "You are an AI assistant that creates true-or-false activities for language teachers.
 Generate a true-or-false activity for {{level}} level students learning {{language}}.
-IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }.
+Your answer is returned as structured data that the true-or-false game reads directly.
 
 Language: {{language}}
 CEFR Level: {{level}}
@@ -13,20 +13,19 @@ Activity Rules:
 4. Statements must be clearly worded and appropriate for the specified level.
 5. Keep each statement concise (one sentence).
 6. Include a short explanation for why the statement is true or false.
-7. All content must be in {{language}} unless the explanation requires comparison with another language.
-
-Response format:
-{\"title\": \"topic title\",
- \"question-count\": 5,
- \"questions\": [
-   {\"statement\": \"statement text\",
-    \"answer\": true,
-    \"explanation\": \"short explanation of why this is true/false\"}
- ]}"
+7. All content must be in {{language}} unless the explanation requires comparison with another language."
 
  :user "{{request}}"
+
+ ;; appended to :instructions only when a book (vector store) is attached
+ :file-search-instructions "A reference document has been attached via file_search — prioritize it over general knowledge when relevant.
+When the teacher refers to the document (e.g. \"from the book\", \"chapter 3\", a character or event in it), its content is the topic: search it and write the statements from what you find.
+Search for the document's subject matter and key terms, not for the words of the request.
+Every statement must be clearly true or false according to the document — not a matter of interpretation — and its explanation says what the document shows.
+Write the statements in your own simple words at {{level}} level; do not copy long sentences. The activity rules above still apply."
 
  :config {:model "gpt-4o"
           :temperature 0.7
           :max-output-tokens 2000
-          :store true}}
+          :store true
+          :response-schema :true-false}}

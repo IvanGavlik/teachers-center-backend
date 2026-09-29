@@ -23,21 +23,22 @@
 ;; ── Schema builders ──────────────────────────────────────────────────────────
 ;; Strict mode requires every object to list all its properties in :required and to set
 ;; additionalProperties false; `obj` does both so no object can forget either.
+;; Public — game-schema builds its activity schemas from the same pieces.
 
-(defn- obj [props]
+(defn obj [props]
   {:type                 "object"
    :properties           props
    :required             (mapv name (keys props))
    :additionalProperties false})
 
-(defn- string-schema
+(defn string-schema
   ([] {:type "string"})
   ([description] {:type "string" :description description}))
 
-(defn- nullable-string [description]
+(defn nullable-string [description]
   {:type ["string" "null"] :description description})
 
-(defn- array-of [items & {:keys [min max description]}]
+(defn array-of [items & {:keys [min max description]}]
   (cond-> {:type "array" :items items}
     min         (assoc :minItems min)
     max         (assoc :maxItems max)
@@ -207,7 +208,7 @@
       (assoc item :highlight (when (and i (<= (+ i (count highlight)) (count text)))
                                (subs text i (+ i (count highlight))))))))
 
-(defn- blank->nil [s]
+(defn blank->nil [s]
   (when-not (str/blank? s) s))
 
 (defn- fit-row [n-cols row]

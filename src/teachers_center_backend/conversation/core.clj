@@ -2,6 +2,7 @@
   (:require [teachers-center-backend.openapi.core :as openai]
             [teachers-center-backend.content :as content]
             [teachers-center-backend.conversation.slide-schema :as slide-schema]
+            [teachers-center-backend.conversation.game-schema :as game-schema]
             [teachers-center-backend.db :as db]
             [clojure.edn :as edn]
             [cheshire.core :as json]
@@ -187,22 +188,27 @@
      (-> (io/resource "conversation-content.edn") slurp edn/read-string))))
 
 
-; TODO should this be in the edn file what about edit mode
-(def file-search-instruction
-  "A reference document has been attached via file_search — prioritize it over general knowledge when relevant.
-When the teacher refers to the attached document (e.g. \"from the document\", \"from the book\", \"chapter 3\"), the document's content counts as a specific topic: search it and build the slides from what you find — do not ask for the topic.
-Search for the document's subject matter and key terms, not for the words of the request: for \"vocabulary from the document\" search what the document is about and pick its important words yourself — any document contains vocabulary. The other decision rules (e.g. the number of slides) still apply.")
+(defn- response-text-format
+  "Strict structured output for the template's :response-schema (slides or a game)."
+  [schema-key]
+  (when schema-key
+    (if (game-schema/schema-key? schema-key)
+      (game-schema/text-format schema-key)
+      (slide-schema/text-format schema-key))))
 
 (defn ask-responses-api
   [openapi-client conversation-config request-msg settings previous-response-id book-ids]
   (let [rendered     (content/render-content conversation-config (merge settings {:request request-msg}))
+        ;; each template words its own book guidance (:file-search-instructions) — slides, an
+        ;; edit and each game use the document differently
+        book-note    (:file-search-instructions rendered)
+        _            (when (and (seq book-ids) (not book-note))
+                       (log/warn "book attached but the template has no :file-search-instructions"))
         instructions (cond-> (:instructions rendered)
-                       (seq book-ids) (str "\n\n" file-search-instruction))
+                       (and (seq book-ids) book-note) (str "\n\n" book-note))
         input        (:user rendered)
         config       (:config rendered)
-        ;; templates that name a :response-schema get strict structured output; the rest
-        ;; (interactivity) keep plain JSON-in-text as before
-        text-format  (some-> (:response-schema config) slide-schema/text-format)
+        text-format  (response-text-format (:response-schema config))
         res          (openai/responses-api openapi-client
                                             {:instructions         instructions
                                              :input                input
@@ -341,7 +347,9 @@ Search for the document's subject matter and key terms, not for the words of the
 
         res-content          (openai/response-output-text res)
         _ (log/debug "generate-interactivity response:" res-content)
-        res-data             (json/parse-string res-content true)
+        ;; checked before saving — the saved activity is what students get via the QR code
+        res-data             (game-schema/normalize-game (get-in interactivity-config [:config :response-schema])
+                                                         (json/parse-string res-content true))
 
         activity-id          (str (java.util.UUID/randomUUID))
         _ (db/save-interactivity! activity-id (assoc res-data :mode mode))]

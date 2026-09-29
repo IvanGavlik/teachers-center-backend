@@ -1,6 +1,6 @@
 {:instructions "You are an AI assistant that creates \"guess the word from definition\" activities for language teachers.
 Generate a guess-the-word activity for {{level}} level students learning {{language}}.
-IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }.
+Your answer is returned as structured data that the guess-the-word game reads directly.
 
 Language: {{language}}
 CEFR Level: {{level}}
@@ -13,21 +13,20 @@ Activity Rules:
 4. The word must be common vocabulary appropriate for the specified level (avoid obscure or overly technical words unless requested).
 5. The definition must not contain the answer word itself or an obvious derivative of it.
 6. Vary the definition style: dictionary-style definitions, descriptive clues, \"used to...\" functional clues, synonym clues.
-7. Include a short extra hint for each word (e.g. first letter, category, or a short example sentence with the word blanked out) to help students who get stuck.
-8. All content must be in {{language}} unless the hint requires comparison with another language.
-
-Response format:
-{\"title\": \"topic title\",
- \"question-count\": 5,
- \"questions\": [
-   {\"definition\": \"A large gray animal with a trunk.\",
-    \"word\": \"elephant\",
-    \"hint\": \"starts with 'e'\"}
- ]}"
+7. Include a short extra hint for each word (e.g. first letter, category, or a short example sentence with the word blanked out) to help students who get stuck. The hint must not contain the answer word.
+8. All content must be in {{language}} unless the hint requires comparison with another language."
 
  :user "{{request}}"
+
+ ;; appended to :instructions only when a book (vector store) is attached
+ :file-search-instructions "A reference document has been attached via file_search — prioritize it over general knowledge when relevant.
+When the teacher refers to the document (e.g. \"from the book\", \"chapter 3\"), its content is the topic: search it and pick the words from what you find.
+Search for the document's subject matter and key terms, not for the words of the request — any document contains vocabulary.
+Pick words from the document that are useful for {{level}} students; do not use names of characters or places unless the teacher asks for them.
+Write your own definitions — do not quote the document. The activity rules above still apply."
 
  :config {:model "gpt-4o"
           :temperature 0.7
           :max-output-tokens 2000
-          :store true}}
+          :store true
+          :response-schema :guess-the-word}}

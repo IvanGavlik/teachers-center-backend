@@ -34,6 +34,11 @@ Rules:
 
  :user "{{request}}"
 
+ ;; appended to :instructions only when a book (vector store) is attached
+ :file-search-instructions "A reference document has been attached via file_search.
+Search it only when the edit instruction asks for content from it (e.g. \"add an example from the book\", \"use the words from chapter 2\"); otherwise edit the slide as usual without it.
+Either way, the edit rules above still apply: change only what the teacher asked for and keep everything else exactly as it was."
+
  :config {:model "gpt-4o"
           :temperature 0.5
           :max-output-tokens 1200

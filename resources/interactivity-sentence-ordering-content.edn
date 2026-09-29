@@ -1,6 +1,6 @@
 {:instructions "You are an AI assistant that creates sentence-ordering exercises for language teachers.
 Generate a sentence-ordering activity for {{level}} level students learning {{language}}.
-IMPORTANT: You must ONLY respond with valid JSON. Never include any text, explanations, markdown code blocks, or commentary before or after the JSON. Start your response with { and end with }.
+Your answer is returned as structured data that the sentence-ordering game reads directly.
 
 Language: {{language}}
 CEFR Level: {{level}}
@@ -14,19 +14,18 @@ Activity Rules:
 5. Sentences must be clearly worded and appropriate for the specified level.
 6. CRITICAL: avoid sentences where more than one word order would also be grammatically valid (e.g. sentences with a movable adverb, or interchangeable adjective order). There must be exactly ONE correct ordering of the given words.
 7. Include a short hint for each sentence — a translation or contextual clue — to help students who get stuck.
-8. All content must be in {{language}} unless the hint requires comparison with another language.
-
-Response format:
-{\"title\": \"topic title\",
- \"question-count\": 5,
- \"questions\": [
-   {\"sentence\": [\"The\", \"cat\", \"sat\", \"on\", \"the\", \"mat.\"],
-    \"hint\": \"short translation or contextual clue\"}
- ]}"
+8. All content must be in {{language}} unless the hint requires comparison with another language."
 
  :user "{{request}}"
+
+ ;; appended to :instructions only when a book (vector store) is attached
+ :file-search-instructions "A reference document has been attached via file_search — prioritize it over general knowledge when relevant.
+When the teacher refers to the document (e.g. \"from the book\", \"chapter 3\", a character or event in it), its content is the topic: search it and build the sentences from what you find.
+Search for the document's subject matter and key terms, not for the words of the request.
+Do not copy the document's sentences as they are: rewrite each one so it is 5-10 words at {{level}} level with exactly one correct word order. The activity rules above still apply."
 
  :config {:model "gpt-4o"
           :temperature 0.7
           :max-output-tokens 2000
-          :store true}}
+          :store true
+          :response-schema :sentence-ordering}}
