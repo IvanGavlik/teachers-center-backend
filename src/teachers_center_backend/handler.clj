@@ -2,6 +2,8 @@
   (:require [compojure.core :refer [defroutes GET POST]]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
             [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
             [ring.middleware.cors :refer [wrap-cors]]
             [ring.middleware.multipart-params :refer [wrap-multipart-params]]
@@ -12,10 +14,16 @@
             [teachers-center-backend.library :as library]
             [teachers-center-backend.game :as game]))
 
+;; Release version — bump resources/VERSION together with the git tag (vX.Y.Z) and the
+;; add-in's manifest version
+(def version
+  (some-> (io/resource "VERSION") slurp str/trim))
+
 (defn health-handler [_]
-  (response {:status "ok" 
+  (response {:status "ok"
              :timestamp (str (java.time.Instant/now))
-             :service "teachers-center-backend"}))
+             :service "teachers-center-backend"
+             :version version}))
 
 (defn ws-handler [open-api-client req]
   (with-channel req ch
