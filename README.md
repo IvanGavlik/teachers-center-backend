@@ -1,3 +1,4 @@
+
 # Teachers Center Backend
 
 Clojure backend service for the AI Slides Assistant, providing content generation endpoints for language teachers.
@@ -113,9 +114,9 @@ Intelj specific: Then connect using remote
 (reset)  ; Restart the system
 ```
 
-### Run Server Directly
+### Run Server Directl
 ```bash
-clj -M -m teachers-center-backend.core
+	clj -M -m teachers-center-backend.core
 ```
 
 

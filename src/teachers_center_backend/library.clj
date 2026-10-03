@@ -5,6 +5,13 @@
 
 (def ^:private max-file-size-bytes (* 20 1024 1024))
 
+;; Retention — both are stated in the privacy policy (teacher-assistant/privacy-policy.html),
+;; change them together. The index (vector store) expires 3 days after it was last used;
+;; the PDF itself is deleted by OpenAI 7 days after upload. A book only lives for one taskpane
+;; session, so 7 days outlasts any real use of it.
+(def ^:private book-index-expires-after-days 3)
+(def ^:private book-file-expires-after-seconds (* 7 24 60 60))
+
 (defn- pdf-content-type? [content-type]
   (= content-type "application/pdf"))
 
@@ -12,15 +19,16 @@
   "Uploads a file to OpenAI and creates a vector store for it.
    No teacher/session scoping yet — just returns the raw ids."
   [openai-client {:keys [tempfile filename book-name]}]
-  (let [uploaded (file-search/upload-file openai-client {:file-path (.getPath tempfile)
-                                                          :filename  filename
-                                                          :mime-type "application/pdf"})
+  (let [uploaded (file-search/upload-file openai-client {:file-path             (.getPath tempfile)
+                                                          :filename              filename
+                                                          :mime-type             "application/pdf"
+                                                          :expires-after-seconds book-file-expires-after-seconds})
         store    (file-search/create-vector-store openai-client
                    {:name               (or book-name filename)
                     :file-ids           [(:id uploaded)]
                     ;; No verified/ephemeral distinction yet — short-lived default so nothing
                     ;; lingers unbounded until that lands.
-                    :expires-after-days 3})]
+                    :expires-after-days book-index-expires-after-days})]
     {:vector-store-id (:id store)
      :status          (:status store)
      :book-name       (:name store)}))

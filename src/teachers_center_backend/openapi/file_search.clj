@@ -36,14 +36,20 @@
   ;; entirely and uses the underlying File object's own name — which for an HTTP-uploaded
   ;; file is a meaningless Ring tempfile name like "ring-multipart-....tmp", and OpenAI's
   ;; /files endpoint rejects unrecognized extensions.
-  [client {:keys [file-path purpose filename mime-type] :or {purpose "assistants"}}]
+  ;;
+  ;; OpenAI keeps uploaded files until they are deleted (only purpose "batch" expires on its
+  ;; own), so pass :expires-after-seconds (OpenAI allows 3600–2592000) to have it delete the file.
+  [client {:keys [file-path purpose filename mime-type expires-after-seconds] :or {purpose "assistants"}}]
   (let [file (io/file file-path)]
     (openai-client/upload-request client "/files"
-                                  [{:part-name "file"
-                                    :name      (or filename (.getName file))
-                                    :mime-type (or mime-type "application/octet-stream")
-                                    :content   file}
-                                   {:name "purpose" :content purpose}])))
+                                  (cond-> [{:part-name "file"
+                                            :name      (or filename (.getName file))
+                                            :mime-type (or mime-type "application/octet-stream")
+                                            :content   file}
+                                           {:name "purpose" :content purpose}]
+                                    expires-after-seconds
+                                    (conj {:name "expires_after[anchor]" :content "created_at"}
+                                          {:name "expires_after[seconds]" :content (str expires-after-seconds)})))))
 
 (comment
   (require '[dev :as dev])
