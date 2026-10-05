@@ -7,4 +7,10 @@
 
  :teachers-center-backend/openai-client
  {:api-key #env OPENAI_API_KEY
-  :base-url #or [#env OPENAI_BASE_URL "https://api.openai.com/v1"]}}
+  :base-url #or [#env OPENAI_BASE_URL "https://api.openai.com/v1"]}
+
+ ;; Azure Document Intelligence (book OCR, doc/book-ocr-investigation.md). Optional — only
+ ;; needed when a book is converted; no init-key, so Integrant passes the map through as-is.
+ :teachers-center-backend/azure-di
+ {:endpoint #env AZURE_DI_ENDPOINT
+  :key #env AZURE_DI_KEY}}

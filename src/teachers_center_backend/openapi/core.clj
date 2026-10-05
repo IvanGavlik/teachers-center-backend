@@ -114,9 +114,10 @@
                             {:type \"json_schema\" :name \"...\" :strict true :schema {...}}
    config map keys:
    - :model                 defaults to gpt-4o
-   - :temperature
-   - :max-output-tokens"
-  [client {:keys [instructions input previous-response-id vector-store-ids text-format]} {:keys [model temperature max-output-tokens store]
+   - :temperature           not accepted by reasoning models (gpt-6-*) — leave it nil for them
+   - :reasoning-effort      reasoning models only: \"none\" \"low\" \"medium\" \"high\" \"xhigh\" \"max\"
+   - :max-output-tokens     for reasoning models this includes the reasoning tokens"
+  [client {:keys [instructions input previous-response-id vector-store-ids text-format]} {:keys [model temperature reasoning-effort max-output-tokens store]
                                                               :or   {store true}}]
   (let [payload (cond-> {:model        (or model "gpt-4o")
                          :instructions instructions
@@ -126,6 +127,7 @@
                          ;;               for Zero Data Retention orgs (disables chaining entirely).
                          :store        store}
                   temperature          (assoc :temperature temperature)
+                  reasoning-effort     (assoc :reasoning {:effort reasoning-effort})
                   max-output-tokens    (assoc :max_output_tokens max-output-tokens)
                   previous-response-id (assoc :previous_response_id previous-response-id)
                   (seq vector-store-ids) (assoc :tools [{:type "file_search" :vector_store_ids vector-store-ids}]

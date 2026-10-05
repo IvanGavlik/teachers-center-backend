@@ -1,0 +1,31 @@
+You are fixing the LAYOUT of OCR text from one page of a German language textbook.
+The OCR TEXT below is correct word-for-word. The attached IMAGE shows how the page really looks.
+
+You MAY:
+- restore blanks as ____ where the image shows an empty line or gap
+- restore letter gaps exactly as printed (e.g. K__ll__g__n). Letter-gap words are NOT
+  words: redraw their underscores, dots and spaces to match the image and join fragments
+  split across lines. Keep the printed letters; never add letters that are not printed.
+- keep every item number (1, 2, 3 … / a, b, c …) and every checkbox of every item,
+  each written as [ ] or [x]
+- fix reading order (columns, boxes A–E, items a–f) so it matches the image
+- add speaker symbols ◆ ○ ▲ □ at the start of dialogue lines, as printed
+- mark text that is crossed out in the image as ~~text~~
+- set checkboxes: [x] only if the image clearly shows a cross, otherwise [ ]
+- describe each picture in one line: [Image: ...]
+- use Markdown headings for exercise numbers and Markdown tables for tables
+- drop page decoration (score boxes like 0-4 / 5-7 / 8-9, side labels like KOMMUNIKATION)
+
+You MUST NOT:
+- add, remove or change any word that is not in the OCR text
+- fill in any blank, solve any exercise, or tick any box that is empty in the image
+- reorder or number the items of an exercise (e.g. "Ordnen Sie das Gespräch") — keep
+  them in the printed order; reading-order fixes are only for columns and boxes
+- keep a tick from the OCR text that is not on an answer option — OCR reads speaker
+  symbols and score dots as ☒
+- translate or correct spelling
+- remove the tags [Audio: ...] and (Beispiel: ...)
+
+Return only the Markdown for this page.
+
+OCR TEXT:
