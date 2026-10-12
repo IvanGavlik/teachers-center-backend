@@ -1,5 +1,5 @@
 (ns teachers-center-backend.book.check-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [are deftest is testing]]
             [teachers-center-backend.book.check :as check]))
 
 ;; Cases from the manual test of doc/book-ocr-investigation.md — the ways a model invents content.
@@ -98,3 +98,101 @@
     (is (:ok? r))
     (is (empty? (:lost-words r)))
     (is (= {"kommunikation" 1} (:lost-decoration r)))))
+
+;; False positives found on the full 211-page run (doc/Results-211-page-boo-converted.md §3.1).
+
+(deftest audio-markers-are-tagged
+  (testing "the ways Azure reads CD, ◀)) icon and track"
+    (are [azure tag] (= (str tag " a Hören Sie") (check/tag-audio (str azure " a Hören Sie")))
+      "2 41) 10"      "[Audio: CD 2, Track 10]"
+      "2 4) 17-19"    "[Audio: CD 2, Track 17-19]"
+      "2 (1) 20"      "[Audio: CD 2, Track 20]"
+      "2 M) 25-27"    "[Audio: CD 2, Track 25-27]"
+      "2 )) 29"       "[Audio: CD 2, Track 29]"
+      "### 44) 38"    "[Audio: CD 4, Track 38]"
+      "## 50) 33-34"  "[Audio: CD 5, Track 33-34]"
+      "#### 3 41) ) 32" "[Audio: CD 3, Track 32]"))
+  (testing "in a table cell"
+    (is (= "<td>[Audio: CD 2, Track 30-33] </td>" (check/tag-audio "<td>2 41) 30-33</td>"))))
+  (testing "an item number with a bracket isn't one"
+    (is (= "1) 12 Uhr" (check/tag-audio "1) 12 Uhr")))))
+
+(deftest audio-markers-the-model-copied-pass
+  (let [azure "2 41) 38\na Hören Sie und kreuzen Sie an.\n2 41) 39 b Hören Sie noch einmal."]
+    (testing "untagged, bold, with an em space, or as [Audio: …]"
+      (is (:ok? (check/check-page azure "**2 41) 38** ### a Hören Sie und kreuzen Sie an.\n[Audio: CD 2, Track 39] b Hören Sie noch einmal."))))
+    (testing "the CD number left outside the tag, or the icon dropped"
+      (is (:ok? (check/check-page azure "2 [Audio: 38]\na Hören Sie und kreuzen Sie an.\n2 39 b Hören Sie noch einmal."))))
+    (testing "but an item number dropped next to it still counts"
+      (is (not (:ok? (check/check-page (str azure "\n1 Ja.\n2 Nein.\n3 Gut.") (str azure "\nJa.\nNein.\nGut."))))))))
+
+(deftest the-footer-may-be-written-out-with-its-numbers
+  (is (:ok? (check/check-page "Folge 10: Augen.\n<!-- PageFooter=\"LEKTION 10 118 einhundertachtzehn\" -->"
+                              "Folge 10: Augen.\nLEKTION 10 118 einhundertachtzehn"))))
+
+(deftest photo-numbers-may-move-into-the-image-line
+  (let [azure "1\nALTE\nFolge 14: Ende gut\n6\n5\n4\n1 Sehen Sie die Fotos an."]
+    (is (:ok? (check/check-page azure (str "[Image: 1 — Torte mit „ALTE“.]\n[Image 4: Eine Familie feiert.]\n"
+                                           "[Image: Freunde (Foto 5).]\n[Image: 6 — Freunde lächeln.]\n"
+                                           "Folge 14: Ende gut\n1 Sehen Sie die Fotos an."))))
+    (testing "[Image N: …] is an image line, its words don't count as added"
+      (is (empty? (:added-words (check/check-page "Text." "Text.\n[Image 2: A doctor walking down a corridor.]")))))))
+
+(deftest answer-circles-read-as-zero-may-go
+  (is (:ok? (check/check-page "Was macht Amidou?\n0\nlaufen\n0\n0\nMusik hören\n0"
+                              "Was macht Amidou?\n[ ] laufen\n[ ] Musik hören"))))
+
+(deftest crossed-out-letters-stay-part-of-the-word
+  (is (:ok? (check/check-page "## A euxre\nPeter ist müde." "## A eu~~x~~re\nPeter ist müde."))))
+
+(deftest a-capital-i-read-as-l-may-be-fixed
+  (is (:ok? (check/check-page "loanna ist müde." "Ioanna ist müde.")))
+  (testing "but no other spelling fix"
+    (is (= {"weniger" 1} (:added-words (check/check-page "Ich esse wenig." "Ich esse weniger.")))))
+  (testing "nor letters from another alphabet (Cyrillic е, л)"
+    (let [r (check/check-page "Er schnel Kaffee." "Er schnел Kaffee.")]
+      (is (not (:ok? r)))
+      (is (= {"schnел" 1} (:foreign-words r))))))
+
+(deftest html-entities-are-not-words
+  (is (:ok? (check/check-page "| B | Ü S |" "| B | Ü &nbsp;&nbsp;&nbsp; S |"))))
+
+;; False positives from judging the prompt-v4 fallbacks against the page images (results doc §8).
+
+(deftest spacing-in-number-lists-and-dates-does-not-count
+  (is (:ok? (check/check-page "1,2,5\nEr ist am 24.2. 1990 geboren. Vom 12 .- 15.6."
+                              "1, 2, 5\nEr ist am 24. 2. 1990 geboren. Vom 12.–15. 6.")))
+  (testing "but item numbers still count"
+    (is (= {"1" 1 "2" 1 "3" 1}
+           (:added-numbers (check/check-page "Ja.\nNein.\nGut." "1. Ja.\n2. Nein.\n3. Gut."))))))
+
+(deftest an-audio-marker-without-a-track-is-tagged
+  (is (= "[Audio: CD 2]\na Hören Sie." (check/tag-audio "2 0)\na Hören Sie.")))
+  (is (:ok? (check/check-page "2 0)\n2 Bitte hören Sie zu!\n3 Machen Sie das!\n4 Gut."
+                              "2 Bitte hören Sie zu!\n3 Machen Sie das!\n4 Gut."))))
+
+(deftest real-ticks-before-an-example-or-a-number-option
+  (testing "the book's ticked example item"
+    (is (zero? (:dangling-ticks (check/check-page "1 ☒ du bitte nicht so schnell"
+                                                  "1 [x] ____ (Beispiel: Würdest) du bitte nicht so schnell")))))
+  (testing "options that are numbers"
+    (is (zero? (:dangling-ticks (check/check-page "Getreidegasse ☒ 9 ☐ 17" "Getreidegasse [x] 9 [ ] 17")))))
+  (testing "but a tick before an empty blank, or a score range, still counts"
+    (is (= 2 (:dangling-ticks (check/check-page "Er ☒ Kaffee.\n☒ 0-4 ☐ 5-7" "Er [x] ____ Kaffee.\n[x] 0-4 [ ] 5-7"))))))
+
+(deftest a-footer-azure-did-not-mark-may-go
+  (is (:ok? (check/check-page "1\nJa, das schmeckt.\n2\nNein.\n3\nGut.\nLEKTION 13 AB\n144 einhundertvierundvierzig"
+                              "1 Ja, das schmeckt.\n2 Nein.\n3 Gut.")))
+  (testing "a number exercise isn't a footer"
+    (is (not (:ok? (check/check-page "12 zwölf\n13 dreizehn\n14 vierzehn\n15 fünfzehn\n16 sechzehn\n17 siebzehn" "Zahlen."))))))
+
+(deftest a-letter-gap-split-by-spaces-is-one-gap-word
+  (is (:ok? (check/check-page "Ich habe einen guten Deutschk _n_t_s_n." "Ich habe einen guten Deutschk_n_t_s__n.")))
+  (testing "words next to a blank still count"
+    (is (= {"schönen" 1} (:added-words (check/check-page "Er hat ein ____ Monat." "Er hat ein schönen ____ Monat."))))))
+
+(deftest letter-gap-joining-leaves-other-words-alone
+  (testing "a speaker symbol Azure read as O before a stray _"
+    (is (:ok? (check/check-page "O _Und? Passt Ihnen die Hose?" "○ Und? Passt Ihnen die Hose?"))))
+  (testing "Azure's escaped dots in a number list"
+    (is (:ok? (check/check-page "4\\. 3\\. 2\\. Die letzten Ziffern" "| 4. 3. 2. | Die letzten Ziffern |")))))

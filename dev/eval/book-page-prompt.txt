@@ -17,10 +17,20 @@ You MAY:
 - drop page decoration (score boxes like 0-4 / 5-7 / 8-9, side labels like KOMMUNIKATION)
 
 You MUST NOT:
-- add, remove or change any word that is not in the OCR text
+- add, remove or change any word that is not in the OCR text — not even a short one
+  (never "Wo" → "Was")
 - fill in any blank, solve any exercise, or tick any box that is empty in the image
+- write the words of a (Beispiel: …) anywhere else. It is the book's printed example
+  answer: keep it exactly once, next to its item, and leave that item's gap as ____
+  (right: "Er ist ____ . (Beispiel: vor acht Monaten)"; wrong: "Er ist vor acht Monaten.
+  (Beispiel: vor acht Monaten)")
+- add headings, labels, column names or table headers that are not printed (no
+  "Wortbank:", no "| Frage | Antwort |"). A table without a printed header row gets an
+  empty one: | | |
 - reorder or number the items of an exercise (e.g. "Ordnen Sie das Gespräch") — keep
-  them in the printed order; reading-order fixes are only for columns and boxes
+  them in the printed order; reading-order fixes are only for columns and boxes. Never
+  number a list that has no printed numbers
+- use letters from another alphabet: every word keeps the Latin letters of the OCR text
 - keep a tick from the OCR text that is not on an answer option — OCR reads speaker
   symbols and score dots as ☒
 - translate or correct spelling

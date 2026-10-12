@@ -114,11 +114,6 @@
             (subs content start end)
             spans)))
 
-(defn- tag-audio
-  "Azure reads the ◀)) icon as `)` or `4)`: \"2 ) 5 a Hören Sie\" → \"[Audio: CD 2, Track 5] a Hören Sie\"."
-  [text]
-  (str/replace text #"(?m)^(?:#+ )?(\d) \d?\) ?(\d{1,2})\s+" "[Audio: CD $1, Track $2] "))
-
 (defn- clean [text]
   (-> text
       (str/replace #"</?figure>" "")
@@ -142,7 +137,7 @@
               text    (mark-examples content rng styles)
               ;; Headers carry the unit number ("8 D"), not the page number — footers only.
               footers (map second (re-seq #"<!-- PageFooter=\"([^\"]*)\" -->" text))]]
-    {:azure-text   (clean (tag-audio text))
+    {:azure-text   (clean (check/tag-audio text))
      :printed-page (printed-page footers)
      :lesson       (some #(some-> (re-find #"LEKTION\s+(\d+)" %) second parse-long) footers)}))
 
@@ -437,3 +432,36 @@
   (convert-book {:name "schritte-2-full" :title "Schritte International neu 2"
                  :pdf (str downloads "Schritte International neu 2.pdf")})
   )
+
+(defn recheck-book
+  "Runs the check again, with no model calls, on the answers a convert-book run saved: each page's
+   last answer (pages/pNNN-model.md) against Azure's text rebuilt from the cached Azure JSON, so a
+   change to step ② counts too. `dirs` are output folders of the same book; a later one wins for
+   the pages it has (a re-run after errors). Prints the pages that changed and the totals."
+  [azure-json dirs]
+  (let [azure  (into {} (map-indexed (fn [i p] [(inc i) (:azure-text p)]))
+                     (mapcat split-pages (load-azure-json [azure-json])))
+        status (into {} (for [d dirs
+                              p (:pages (read-string (slurp (io/file out-root d "report.edn"))))
+                              :when (not= :error (:status p))]
+                          [(:pdf-page p) [d (:status p)]]))
+        rows   (for [[page [d old]] (sort status)
+                     :let [f (io/file out-root d "pages" (format "p%03d-model.md" page))
+                           r (check/check-page (azure page) (slurp f))]]
+                 {:pdf-page  page
+                  :old       old
+                  :new       (cond (not (:ok? r))     :fallback
+                                   (= :fallback old) :retried-ok
+                                   :else             old)
+                  :added     (str/join " " (keys (:added-words r)))
+                  :lost      (str/join " " (keys (:lost-words r)))
+                  :lost-nums (str/join " " (keys (:lost-numbers r)))
+                  :added-nums (str/join " " (keys (:added-numbers r)))
+                  :dangling  (:dangling-ticks r)})]
+    (pp/print-table [:pdf-page :old :new :added :lost :lost-nums :added-nums :dangling]
+                    (filter #(or (not= (:old %) (:new %)) (= :fallback (:new %))) rows))
+    (let [totals {:pages (count rows)
+                  :old   (frequencies (map :old rows))
+                  :new   (frequencies (map :new rows))}]
+      (println) (pp/pprint totals)
+      totals)))
