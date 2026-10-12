@@ -3,14 +3,16 @@
   :handler #ig/ref :teachers-center-backend/handler}
 
  :teachers-center-backend/handler
- {:openai-client #ig/ref :teachers-center-backend/openai-client}
+ {:openai-client #ig/ref :teachers-center-backend/openai-client
+  :azure-di #ig/ref :teachers-center-backend/azure-di}
 
  :teachers-center-backend/openai-client
  {:api-key #env OPENAI_API_KEY
   :base-url #or [#env OPENAI_BASE_URL "https://api.openai.com/v1"]}
 
- ;; Azure Document Intelligence (book OCR, doc/book-ocr-investigation.md). Optional — only
- ;; needed when a book is converted; no init-key, so Integrant passes the map through as-is.
+ ;; Azure Document Intelligence (book OCR, doc/book-production-plan.md). Optional — without it
+ ;; a book upload sends the PDF to OpenAI as-is (fine for digital PDFs, empty for scans).
+ ;; No init-key, so Integrant passes the map through as-is.
  :teachers-center-backend/azure-di
  {:endpoint #env AZURE_DI_ENDPOINT
   :key #env AZURE_DI_KEY}}

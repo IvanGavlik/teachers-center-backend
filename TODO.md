@@ -214,3 +214,29 @@
   look into case 17 to settle it?
 
 ✻
+
+
+Book OCR — make it work for other books and languages (2026-10-13)
+==================================================================
+
+The pipeline is mostly language-neutral (Azure OCR, the word check, fallback to
+Azure text), but some parts are tuned to Schritte / German:
+
+- [ ] check.clj: word pattern is A-Z + German umlauts only. French é/ç, Spanish ñ,
+      Croatian č/š/ž get split and fail. Use \p{L}.
+- [ ] Prompt: says "German textbook" with German examples. Pass the book's language
+      (the teacher picks it in the add-in) into the prompt.
+- [ ] (Beispiel: …) tag → neutral (Example: …) in step ②, prompt and check.
+- [ ] Audio rule is Schritte's "CD icon track" format. Other publishers differ;
+      unknown formats stay plain numbers. Consider letting the model tag audio.
+- [ ] Footer rule uses German number words. Rely on Azure's footer tags or a
+      simpler rule.
+- [ ] Foreign-letter rule flags Cyrillic/Greek. For a Russian/Greek book flag
+      "a script different from Azure's text" instead.
+- [ ] printed-page in step ② looks for "LEKTION". Make it unit-name-neutral.
+- [ ] Eval set: 2–3 books per language teachers actually use (check the add-in
+      settings / logs), chosen for variety (workbook, coursebook, other publisher,
+      scan + digital), 10–20 pages each. Start: Schritte 5 + one English + one
+      French book. Only books we own; outputs stay git-ignored.
+- [ ] Production: log the fallback rate per uploaded book; high rates show which
+      layouts/publishers need work next.

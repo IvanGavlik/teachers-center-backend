@@ -16,6 +16,8 @@
   (:require [teachers-center-backend.core :refer [load-config]]
             [teachers-center-backend.openapi.core :as openai]
             [teachers-center-backend.book.check :as check]
+            [teachers-center-backend.book.convert :as convert]
+            [teachers-center-backend.azure.layout :as azure]
             [clj-http.client :as http]
             [cheshire.core :as json]
             [clojure.java.io :as io]
@@ -48,44 +50,18 @@
   (let [d (.digest (MessageDigest/getInstance "SHA-256") (java.nio.file.Files/readAllBytes (.toPath f)))]
     (subs (apply str (map #(format "%02x" %) d)) 0 12)))
 
-(defn- poll-operation [{:keys [key]} op-url]
-  (let [deadline (+ (System/currentTimeMillis) (* 30 60 1000))]
-    (loop []
-      (let [res (http/get op-url {:headers          {"Ocp-Apim-Subscription-Key" key}
-                                  :throw-exceptions false})
-            body (json/parse-string (:body res) true)]
-        (case (:status body)
-          "succeeded" body
-          "failed"    (throw (ex-info "Azure analyze failed" {:error (:error body)}))
-          (if (> (System/currentTimeMillis) deadline)
-            (throw (ex-info "Azure analyze timed out" {:status (:status body)}))
-            (do (Thread/sleep 3000) (recur))))))))
-
 (defn analyze-layout
-  "Runs prebuilt-layout (Markdown output) on a PDF and returns :analyzeResult. Cached by file hash."
-  [{:keys [endpoint key] :as azure} ^File pdf ^File out-dir]
+  "Runs prebuilt-layout (Markdown output) on a PDF and returns :analyzeResult. Cached by file hash
+   in out-dir, so re-runs don't pay for OCR again."
+  [azure ^File pdf ^File out-dir]
   (let [cache (io/file out-dir (str "azure-" (sha-12 pdf) ".json"))]
     (if (.exists cache)
       (do (println "Azure: using cached" (.getName cache))
           (:analyzeResult (json/parse-string (slurp cache) true)))
-      (do
-        (when-not (and endpoint key)
-          (throw (ex-info "AZURE_DI_ENDPOINT / AZURE_DI_KEY missing in .env" {})))
-        (println "Azure: analyzing" (.getName pdf) "…")
-        (let [url (str (str/replace endpoint #"/+$" "")
-                       "/documentintelligence/documentModels/prebuilt-layout:analyze"
-                       "?api-version=2024-11-30&outputContentFormat=markdown")
-              res (http/post url {:headers          {"Ocp-Apim-Subscription-Key" key
-                                                     "Content-Type"              "application/pdf"}
-                                  :body             pdf
-                                  :throw-exceptions false
-                                  :socket-timeout   600000
-                                  :connection-timeout 60000})]
-          (when-not (= 202 (:status res))
-            (throw (ex-info "Azure analyze request rejected" {:status (:status res) :body (:body res)})))
-          (let [body (poll-operation azure (get-in res [:headers "operation-location"]))]
-            (spit cache (json/generate-string body))
-            (:analyzeResult body)))))))
+      (do (println "Azure: analyzing" (.getName pdf) "…")
+          (let [result (azure/analyze azure pdf {:timeout-ms (* 30 60 1000)})]
+            (spit cache (json/generate-string {:analyzeResult result}))
+            result)))))
 
 (defn load-azure-json
   "Analyze results saved from the Document Intelligence Studio (one file per piece of the PDF)."
@@ -94,52 +70,10 @@
 
 ;; ── ② Split into pages and clean up ──────────────────────────────────────────
 
-(defn- page-range [page]
-  (let [spans (:spans page)]
-    [(apply min (map :offset spans))
-     (apply max (map #(+ (:offset %) (:length %)) spans))]))
-
-(defn- mark-examples
-  "Wraps the handwritten spans inside [start end) as (Beispiel: …). In a workbook scan these are the
-   book's printed example answers, so they're kept and labelled, never removed."
-  [content [start end] styles]
-  (let [spans (->> styles
-                   (filter #(and (:isHandwritten %) (>= (or (:confidence %) 0) 0.8)))
-                   (mapcat :spans)
-                   (filter #(and (>= (:offset %) start) (<= (+ (:offset %) (:length %)) end)))
-                   (sort-by :offset >))]
-    (reduce (fn [text {:keys [offset length]}]
-              (let [a (- offset start) b (+ a length)]
-                (str (subs text 0 a) "(Beispiel: " (subs text a b) ")" (subs text b))))
-            (subs content start end)
-            spans)))
-
-(defn- clean [text]
-  (-> text
-      (str/replace #"</?figure>" "")
-      (str/replace #"\n{3,}" "\n\n")
-      str/trim))
-
-(defn- printed-page
-  "\"LEKTION 8 AB 92 zweiundneunzig\" → 92, \"dreiundneunzig 93 AB LEKTION 8\" → 93."
-  [footers]
-  (some->> footers
-           (map #(str/replace % #"LEKTION\s+\d+" ""))
-           (mapcat #(re-seq #"\b\d{1,3}\b" %))
-           last
-           parse-long))
-
-(defn split-pages
-  "One map per page: :azure-text (cleaned, step ②), :printed-page, :lesson."
-  [{:keys [content pages styles]}]
-  (for [page pages
-        :let [rng     (page-range page)
-              text    (mark-examples content rng styles)
-              ;; Headers carry the unit number ("8 D"), not the page number — footers only.
-              footers (map second (re-seq #"<!-- PageFooter=\"([^\"]*)\" -->" text))]]
-    {:azure-text   (clean (check/tag-audio text))
-     :printed-page (printed-page footers)
-     :lesson       (some #(some-> (re-find #"LEKTION\s+(\d+)" %) second parse-long) footers)}))
+;; Step ② lives in src (teachers-center-backend.book.convert); these names keep the eval code and
+;; the REPL scripts working.
+(def split-pages convert/split-pages)
+(def page-marker convert/page-marker)
 
 ;; ── ③ Page image ─────────────────────────────────────────────────────────────
 
@@ -224,12 +158,6 @@
 
 ;; ── ⑥ Join and report ────────────────────────────────────────────────────────
 
-(defn- page-marker [title {:keys [pdf-page printed-page lesson]}]
-  (str "<!-- " (str/join " · " (remove nil? [title
-                                              (when lesson (str "Lektion " lesson))
-                                              (when printed-page (str "S. " printed-page))
-                                              (str "PDF p. " pdf-page)]))
-       " -->"))
 
 (defn- cost [model {:keys [in out]}]
   (when-let [{p-in :in p-out :out} (usd-per-1m-tokens model)]

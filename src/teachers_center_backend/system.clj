@@ -10,9 +10,9 @@
 (defmethod ig/init-key :teachers-center-backend/server
   [_ {:keys [port handler]}]
   (println (str "Starting server on port " port))
-  ;; http-kit's default :max-body is 8MB — below our own 20MB PDF-upload limit
+  ;; http-kit's default :max-body is 8MB — below our own 60MB PDF-upload limit
   ;; (teachers-center-backend.library), so it must be raised here too.
-  (server/run-server handler {:port port :join? false :max-body (* 25 1024 1024)}))
+  (server/run-server handler {:port port :join? false :max-body (* 65 1024 1024)}))
 
 (defmethod ig/halt-key! :teachers-center-backend/server
   [_ server]
@@ -26,8 +26,8 @@
         (println "Error stopping server:" (.getMessage e))))))
 
 (defmethod ig/init-key :teachers-center-backend/handler
-  [_ {:keys [openai-client]}]
-  (handler/create-handler openai-client))
+  [_ {:keys [openai-client azure-di]}]
+  (handler/create-handler openai-client azure-di))
 
 (defmethod ig/halt-key! :teachers-center-backend/handler
   [_ _]
