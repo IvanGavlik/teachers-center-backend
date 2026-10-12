@@ -20,12 +20,22 @@
 
 (defonce ^:private jobs (atom {}))
 
-(defonce ^:private ^ExecutorService pool
+(def ^:private concurrent-improvements
+  "Books improved by the vision model at once (Phase 2, 10–20 min each). Their own pool, so a long
+   improvement never makes a new upload wait for OCR — that's the part teachers wait for. Each one
+   runs several pages at once itself (see book.improve)."
+  2)
+
+(defn- daemon-pool
   ;; Daemon threads: a running book job must not keep the JVM alive on shutdown (or after tests)
-  (Executors/newFixedThreadPool concurrent-jobs
-                                (reify ThreadFactory
-                                  (newThread [_ r]
-                                    (doto (Thread. ^Runnable r "book-job") (.setDaemon true))))))
+  [n thread-name]
+  (Executors/newFixedThreadPool n (reify ThreadFactory
+                                    (newThread [_ r]
+                                      (doto (Thread. ^Runnable r ^String thread-name) (.setDaemon true))))))
+
+(defonce ^:private ^ExecutorService pool (daemon-pool concurrent-jobs "book-job"))
+
+(defonce ^:private ^ExecutorService improve-pool (daemon-pool concurrent-improvements "book-improve"))
 
 (defn get-job [id]
   (get @jobs id))
@@ -56,3 +66,14 @@
                    (log/error e "Book job failed" {:job-id id})
                    (update-job! id {:status "failed" :error (or (ex-message e) "Unknown error")})))))
     id))
+
+(defn continue-later!
+  "Runs (f) for job `id` on the improvement pool — the job's long background part. f handles its
+   own errors (an improvement that fails must not turn a usable book into a failed one); anything
+   it lets through is only logged."
+  [id f]
+  (.submit improve-pool ^Runnable
+           (fn []
+             (try (f)
+                  (catch Throwable e
+                    (log/error e "Book job's background part failed" {:job-id id}))))))

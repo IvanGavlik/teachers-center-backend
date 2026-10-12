@@ -58,13 +58,14 @@
   (GET "/game/:activity-id" [activity-id] (game/game-handler activity-id))
   (route/not-found {:success false :error "Route not found"}))
 
-(defn create-handler [openai-client azure-config]
+(defn create-handler [openai-client azure-config book-config]
   (let [inject (fn [handler]
                         (fn [request]
                           ;; Inject into request for handlers
                           (handler (assoc request
                                      :openapi-client openai-client
-                                     :azure-config azure-config))))]
+                                     :azure-config azure-config
+                                     :book-config book-config))))]
     (-> app-routes
         inject
         wrap-multipart-params

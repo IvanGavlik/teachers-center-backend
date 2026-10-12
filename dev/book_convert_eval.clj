@@ -18,6 +18,7 @@
             [teachers-center-backend.book.check :as check]
             [teachers-center-backend.book.convert :as convert]
             [teachers-center-backend.azure.layout :as azure]
+            [teachers-center-backend.book.improve :as improve]
             [clj-http.client :as http]
             [cheshire.core :as json]
             [clojure.java.io :as io]
@@ -41,7 +42,6 @@
                                   "gpt-6-astra" {:in 10.00 :out 50.00}
                                   "gpt-4.1" {:in 2.00 :out 8.00}})
 
-(def ^:private prompt-file "dev/eval/book-page-prompt.txt")
 (def ^:private out-root "dev/eval/out/book")
 
 ;; ── ① Azure Layout ───────────────────────────────────────────────────────────
@@ -75,86 +75,16 @@
 (def split-pages convert/split-pages)
 (def page-marker convert/page-marker)
 
-;; ── ③ Page image ─────────────────────────────────────────────────────────────
+;; ── ③–⑤ live in src (teachers-center-backend.book.improve) ──────────────────
 
-(defn- page-images [^PDDocument doc idx]
-  (let [res (.getResources (.getPage doc idx))]
-    (for [n (.getXObjectNames res)
-          :let [x (.getXObject res n)]
-          :when (instance? PDImageXObject x)]
-      x)))
-
-(defn page-image-url
-  "A scanned page is one big embedded image — use it as it is; otherwise render at 150 dpi."
-  [^PDDocument doc idx]
-  (let [[img & more] (page-images doc idx)
-        bi  (if (and img (empty? more) (>= (.getWidth ^PDImageXObject img) 1000))
-              (.getImage ^PDImageXObject img)
-              (.renderImageWithDPI (PDFRenderer. doc) (int idx) 150 ImageType/RGB))
-        out (ByteArrayOutputStream.)]
-    (ImageIO/write bi "jpg" out)
-    (str "data:image/jpeg;base64," (.encodeToString (Base64/getEncoder) (.toByteArray out)))))
-
-;; ── ④ Vision model repair ────────────────────────────────────────────────────
-
-(defn- load-prompt []
-  ;; The manual test pasted the prompt and the OCR text into one message; here the rules are the
-  ;; instructions and the OCR text goes with the image.
-  (str/trim (str/replace (slurp prompt-file) #"OCR TEXT:\s*$" "")))
-
-(defn- strip-fences [s]
-  (-> s (str/replace #"^\s*```(?:markdown|md)?\s*\n" "") (str/replace #"\n```\s*$" "") str/trim))
-
-(defn repair-page [client {:keys [model effort prompt]} azure-text image-url feedback]
-  (let [t0  (System/nanoTime)
-        res (openai/responses-api
-              client
-              {:instructions prompt
-               :input        [{:role    "user"
-                               :content [{:type "input_text"
-                                          :text (cond-> (str "OCR TEXT:\n" azure-text)
-                                                  feedback (str "\n\nYOUR PREVIOUS ANSWER HAD PROBLEMS:\n- "
-                                                                (str/join "\n- " feedback)
-                                                                "\nReturn the corrected Markdown for the whole page."))}
-                                         {:type "input_image" :image_url image-url :detail "high"}]}]}
-              (if effort
-                ;; reasoning models: no temperature; the output budget also has to hold the reasoning
-                {:model model :reasoning-effort effort :max-output-tokens 16000 :store false}
-                {:model model :temperature 0 :max-output-tokens 4000 :store false}))]
-    {:text  (strip-fences (or (openai/response-output-text res) ""))
-     :usage {:in (get-in res [:usage :input_tokens] 0) :out (get-in res [:usage :output_tokens] 0)}
-     :ms    (quot (- (System/nanoTime) t0) 1000000)}))
-
-;; ── ⑤ Check, retry, fall back ────────────────────────────────────────────────
+(def page-image-url improve/page-image-url)
+(def ^:private load-prompt improve/load-prompt)
+(def repair-page improve/repair-page)
 
 (defn convert-page
-  "Up to 2 attempts; the second one is told what the check found. Falls back to the Azure text."
-  [client opts {:keys [azure-text image-url] :as page}]
-  (loop [attempt 1 feedback nil usage {:in 0 :out 0} ms 0 history []]
-    (let [{:keys [text error] :as r}
-          (try (repair-page client opts azure-text image-url feedback)
-               (catch Exception e
-                 ;; make-request wraps the HTTP error — the status and body are one cause down
-                 (let [d (merge (ex-data e) (some-> e ex-cause ex-data))]
-                   {:error (cond-> {:message (.getMessage e)}
-                             (:status d) (assoc :status (:status d))
-                             (:body d)   (assoc :body (subs (:body d) 0 (min 300 (count (:body d))))))
-                    :usage {:in 0 :out 0} :ms 0})))
-          usage   (merge-with + usage (:usage r))
-          ms      (+ ms (:ms r))
-          result  (when text (check/check-page azure-text text))
-          history (conj history (if error {:error error} {:reasons (:reasons result) :text text}))]
-      (cond
-        (:ok? result)
-        (assoc page :status (if (= 1 attempt) :ok :retried-ok) :attempts attempt :history history
-                    :check result :model-text text :final-text text :usage usage :ms ms)
-
-        (< attempt 2)
-        (recur (inc attempt) (or (:reasons result) ["The request failed, try again."]) usage ms history)
-
-        :else
-        (assoc page :status (if error :error :fallback) :attempts attempt :history history
-                    :check result :model-text text :final-text azure-text :usage usage :ms ms)))))
+  "Up to 2 attempts with the check, then the Azure text — improve/convert-page with this client."
+  [client opts page]
+  (improve/convert-page (partial improve/repair-page client opts) page))
 
 ;; ── ⑥ Join and report ────────────────────────────────────────────────────────
 

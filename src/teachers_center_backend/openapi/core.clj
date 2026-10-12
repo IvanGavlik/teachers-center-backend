@@ -69,6 +69,21 @@
                        :cause-type (class e)
                        :error-code :network-error} e)))))
 
+(defn delete-request [client endpoint]
+  (let [url      (str (:base-url client) endpoint)
+        response (http/delete url {:headers          {"Authorization" (str "Bearer " (:api-key client))}
+                                   :throw-exceptions false
+                                   :cookie-policy    :standard
+                                   :timeout          60000})]
+    (if (= 200 (:status response))
+      (json/parse-string (:body response) true)
+      (do
+        (log/error "OpenAI API error response" {:status (:status response) :body (:body response)})
+        (throw (ex-info "OpenAI API returned error"
+                        {:status     (:status response)
+                         :body       (:body response)
+                         :error-code (classify-openai-error (:status response))}))))))
+
 (defn upload-request [client endpoint parts]
   (try
     (let [url (str (:base-url client) endpoint)

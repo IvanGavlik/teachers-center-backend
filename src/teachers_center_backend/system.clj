@@ -26,8 +26,8 @@
         (println "Error stopping server:" (.getMessage e))))))
 
 (defmethod ig/init-key :teachers-center-backend/handler
-  [_ {:keys [openai-client azure-di]}]
-  (handler/create-handler openai-client azure-di))
+  [_ {:keys [openai-client azure-di book]}]
+  (handler/create-handler openai-client azure-di book))
 
 (defmethod ig/halt-key! :teachers-center-backend/handler
   [_ _]

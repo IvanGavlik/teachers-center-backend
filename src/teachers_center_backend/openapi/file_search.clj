@@ -112,6 +112,31 @@
 ;  Want me to implement it exactly this way — retrieve-vector-store + a poll-vector-store that blocks on status, with
 ;  interval-ms/timeout-ms opts and default values, and adds an example to the comment block?
 
+(defn add-file-to-vector-store
+  "Starts indexing an uploaded file in an existing vector store (the store goes back to
+   \"in_progress\" until it's done)."
+  [client vector-store-id file-id]
+  (openai-client/make-request client (str "/vector_stores/" vector-store-id "/files") {:file_id file-id}))
+
+(defn remove-file-from-vector-store
+  "Takes a file out of the store's index. The file itself stays until delete-file or its expiry."
+  [client vector-store-id file-id]
+  (openai-client/delete-request client (str "/vector_stores/" vector-store-id "/files/" file-id)))
+
+(defn list-files
+  "All files with this purpose ({:id :filename :created_at :expires_at …}), following the pages."
+  [client purpose]
+  (loop [after nil acc []]
+    (let [page  (openai-client/get-request client "/files" (cond-> {:purpose purpose :limit 10000 :order "desc"}
+                                                             after (assoc :after after)))
+          files (into acc (:data page))]
+      (if (and (:has_more page) (seq (:data page)))
+        (recur (:id (last (:data page))) files)
+        files))))
+
+(defn delete-file [client file-id]
+  (openai-client/delete-request client (str "/files/" file-id)))
+
 (defn retrieve-vector-store [client vector-store-id]
   (openai-client/get-request client (str "/vector_stores/" vector-store-id) {}))
 

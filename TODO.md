@@ -240,3 +240,21 @@ Azure text), but some parts are tuned to Schritte / German:
       French book. Only books we own; outputs stay git-ignored.
 - [ ] Production: log the fallback rate per uploaded book; high rates show which
       layouts/publishers need work next.
+
+
+Book OCR Phase 1 — release checklist (2026-10-13)
+=================================================
+
+- [ ] Test in PowerPoint (desktop + web), backend running locally on :2000,
+      `npm run start:dev`: scanned PDF (chip: Reading your book… → Indexing… →
+      Ready, deck uses the book), digital PDF, >60 MB or broken PDF (error
+      message), remove the book while it's processing.
+- [ ] Privacy policy (teacher-assistant): name Microsoft Azure (EU) as a
+      processor for text recognition; on the Azure path only the extracted text
+      is stored at OpenAI, kept 29 days (was 7) and reused when someone uploads
+      the exact same PDF (matched by file fingerprint, not name).
+- [ ] Deploy: set AZURE_DI_ENDPOINT / AZURE_DI_KEY on Render (without them
+      uploads silently use the old PDF path); deploy backend + add-in together
+      (the live add-in polls by vector-store id and breaks against the new
+      endpoint); optional version 2.1.0 (web-only, no Partner Center
+      resubmission); check /health and one real upload on production.

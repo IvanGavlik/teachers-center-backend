@@ -4,7 +4,17 @@
 
  :teachers-center-backend/handler
  {:openai-client #ig/ref :teachers-center-backend/openai-client
-  :azure-di #ig/ref :teachers-center-backend/azure-di}
+  :azure-di #ig/ref :teachers-center-backend/azure-di
+  :book #ig/ref :teachers-center-backend/book}
+
+ ;; Book conversion after OCR (doc/book-production-plan.md, Phase 2): a vision model repairs each
+ ;; page's layout in the background. BOOK_IMPROVE=false turns it off without a deploy — books then
+ ;; stay on Azure's text. No init-key, so Integrant passes the map through as-is.
+ :teachers-center-backend/book
+ {:improve? #boolean #or [#env BOOK_IMPROVE "true"]
+  :model "gpt-6-luna"
+  :effort "high"
+  :parallel 8}
 
  :teachers-center-backend/openai-client
  {:api-key #env OPENAI_API_KEY
