@@ -43,6 +43,38 @@
     (is (= :error (:status r)))
     (is (= (:azure-text page) (:final-text r)))))
 
+(defn- failing-then [errors value]
+  (let [left (atom errors)]
+    (fn []
+      (if-let [e (first @left)]
+        (do (swap! left rest) (throw e))
+        value))))
+
+;; make-request wraps the HTTP error, so the status is one cause down
+(defn- wrapped [data]
+  (ex-info "OpenAI API request failed" {:error-code :network-error} (ex-info "OpenAI API returned error" data)))
+
+(deftest a-rate-limit-is-waited-out
+  (let [sleeps (atom [])
+        f      (failing-then [(wrapped {:status 429 :body "rate_limit_exceeded"})
+                              (wrapped {:status 429 :body "rate_limit_exceeded"})] :answer)]
+    (is (= :answer (improve/call-with-backoff f #(swap! sleeps conj %))))
+    (is (= [5000 10000] @sleeps))))
+
+(deftest a-rate-limit-that-lasts-gives-up
+  (let [sleeps (atom [])
+        f      (failing-then (repeat 10 (wrapped {:status 429})) :answer)]
+    (is (thrown? Exception (improve/call-with-backoff f #(swap! sleeps conj %))))
+    (is (= [5000 10000 20000 40000] @sleeps))))
+
+(deftest other-errors-are-not-waited-out
+  (doseq [data [{:status 429 :body "{\"error\":{\"code\":\"insufficient_quota\"}}"}
+                {:status 500}]]
+    (let [sleeps (atom [])]
+      (is (thrown? Exception (improve/call-with-backoff (failing-then [(wrapped data)] :answer)
+                                                        #(swap! sleeps conj %))))
+      (is (empty? @sleeps)))))
+
 (deftest page-images-are-plain-jpegs
   (testing "a page with a transparent image (the JPEG writer would write nothing) and a page without images"
     (with-open [doc (org.apache.pdfbox.pdmodel.PDDocument.)]

@@ -22,8 +22,30 @@
 
 (def ^:private max-model-calls
   "Model calls at once across all books, so two uploads together don't run into OpenAI's rate
-   limits. 8 at once for one book used ~1/4 of the account's limits on the 211-page run."
-  (Semaphore. 16 true))
+   limits. 8 at once for one book used ~1/4 of the account's limits on the 211-page run, so 24
+   leaves some headroom. Also the ceiling for :parallel — a higher per-book value only adds threads."
+  (Semaphore. 24 true))
+
+(defn- rate-limited?
+  "A 429 that's worth waiting for. insufficient_quota is a 429 too, but waiting won't fix it."
+  [e]
+  (let [{:keys [status body]} (merge (ex-data e) (some-> e ex-cause ex-data))]
+    (and (= 429 status) (not (str/includes? (str body) "insufficient_quota")))))
+
+(defn call-with-backoff
+  "Calls (f); on a rate limit, waits 5, 10, 20, 40 s and tries again before giving up. These waits
+   aren't attempts: the check's retry is for bad answers, not for a busy API."
+  ([f] (call-with-backoff f #(Thread/sleep ^long %)))
+  ([f sleep!]
+   (loop [wait-ms 5000]
+     (let [r (try {:value (f)}
+                  (catch Exception e
+                    (if (and (rate-limited? e) (<= wait-ms 40000)) {:wait e} (throw e))))]
+       (if (contains? r :value)
+         (:value r)
+         (do (log/warn "Rate limited, waiting" {:ms wait-ms})
+             (sleep! wait-ms)
+             (recur (* 2 wait-ms))))))))
 
 ;; ── ③ Page image ─────────────────────────────────────────────────────────────
 
@@ -129,9 +151,11 @@
   [client ^File pdf pages {:keys [model effort parallel on-page] :or {parallel 8 on-page (fn [])}}]
   (let [opts   {:model model :effort effort :prompt (load-prompt)}
         repair (fn [azure-text image-url feedback]
-                 (.acquire max-model-calls)
-                 (try (repair-page client opts azure-text image-url feedback)
-                      (finally (.release max-model-calls))))
+                 ;; the slot is given back while waiting out a rate limit
+                 (call-with-backoff
+                   #(do (.acquire max-model-calls)
+                        (try (repair-page client opts azure-text image-url feedback)
+                             (finally (.release max-model-calls))))))
         pool   (daemon-pool parallel)]
     (with-open [doc (Loader/loadPDF pdf)]
       (try

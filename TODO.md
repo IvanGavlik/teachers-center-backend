@@ -238,23 +238,96 @@ Azure text), but some parts are tuned to Schritte / German:
       settings / logs), chosen for variety (workbook, coursebook, other publisher,
       scan + digital), 10–20 pages each. Start: Schritte 5 + one English + one
       French book. Only books we own; outputs stay git-ignored.
-- [ ] Production: log the fallback rate per uploaded book; high rates show which
+- [x] Production: log the fallback rate per uploaded book (done: the "Book improved"
+      log line has ok/retried-ok/fallback counts and tokens); high rates show which
       layouts/publishers need work next.
 
 
-Book OCR Phase 1 — release checklist (2026-10-13)
-=================================================
+Book OCR Phases 1–4 — release checklist (2026-10-13)
+====================================================
 
 - [ ] Test in PowerPoint (desktop + web), backend running locally on :2000,
       `npm run start:dev`: scanned PDF (chip: Reading your book… → Indexing… →
       Ready, deck uses the book), digital PDF, >60 MB or broken PDF (error
-      message), remove the book while it's processing.
+      message), remove the book while it's processing. Also: the same PDF a
+      second time (ready in seconds, cache), a deck right after "Ready" while
+      the backend is still "improving" (must not block), a 429 message (start
+      the backend with BOOK_IP_DAILY_BOOKS=1, upload two new PDFs).
 - [ ] Privacy policy (teacher-assistant): name Microsoft Azure (EU) as a
       processor for text recognition; on the Azure path only the extracted text
       is stored at OpenAI, kept 29 days (was 7) and reused when someone uploads
       the exact same PDF (matched by file fingerprint, not name).
 - [ ] Deploy: set AZURE_DI_ENDPOINT / AZURE_DI_KEY on Render (without them
-      uploads silently use the old PDF path); deploy backend + add-in together
+      uploads silently use the old PDF path). Optional: BOOK_IMPROVE=false (Luna
+      off), BOOK_DAILY_PAGES (default 3000), BOOK_IP_DAILY_BOOKS (default 10).
+      Deploy backend + add-in together
       (the live add-in polls by vector-store id and breaks against the new
       endpoint); optional version 2.1.0 (web-only, no Partner Center
       resubmission); check /health and one real upload on production.
+- [ ] After deploy: check what Render puts in X-Forwarded-For (log one upload's
+      headers). library/client-ip takes the FIRST entry, which a client can fake
+      to dodge the per-IP limit (the daily page budget still caps cost). Take
+      the last entry only if Render appends the real client IP there.
+
+
+Book OCR — what's left after Phases 1–4 (2026-10-13)
+====================================================
+
+Code for Phases 1–4 is built and reviewed (doc/book-production-plan.md), not
+committed. In order:
+
+Before release
+- [ ] Commit both repos (backend: library, azure/, book/, openapi additions,
+      config, deps (jbig2-imageio), tests, prompt moved to resources/book/;
+      add-in: job polling, chip stages, 60 MB, error messages).
+- [ ] Luna only for German books until Phase 0 is done: the add-in sends the
+      teacher's language with the upload, the backend skips `improving` for
+      other languages (they stay on Azure text). Or start with
+      BOOK_IMPROVE=false and turn it on later.
+- [ ] One full-size run before release (e.g. Schritte 2, 211 pages, 46 MB) on
+      the paid Render instance: RAM use (PDFBox + page images), time to usable /
+      ready, Azure + Luna cost. Only measured locally so far (2-page PDFs).
+- [ ] doc/CERTIFICATION_NOTES.md + What's New text: 60 MB, 300 pages, scanned
+      books work.
+- [ ] README "Testing" section is still a TODO: `clojure -X:test` (unit tests);
+      `book-convert-eval/recheck-book` re-checks saved answers for free;
+      `-M:dev:repl` starts nREPL and never exits, so scripts use `-M:dev`.
+
+Azure / OpenAI accounts
+- [ ] Azure trial credit ends ~2026-11-02: set up billing for the S0 resource
+      (~$10 per 1,000 pages) or uploads fall back to the PDF path.
+- [ ] Clean up test data at OpenAI: the ~10 old test PDFs (no expiry) and the
+      files / vector stores from today's local tests (they expire on their own:
+      files 29 days, stores 3 days unused).
+
+Speed (Phase 2, doc/book-improve-speed.md)
+- [x] Option 1: 24 pages at once (BOOK_PARALLEL), global limit 24, 429s waited out.
+- [ ] Measure option 1 on a real book: wall clock (target ~6–8 min / 211 pages), "Rate limited,
+      waiting" lines, RAM on Render. Lower BOOK_PARALLEL if 429s show up.
+- [ ] Option 2: effort medium/low eval on the 53-page prompt-v4 set.
+- [ ] Option 4 (improve + swap in parts): designed, build only if a book still takes ≥10 min.
+
+Quality (Phase 2 output)
+- [ ] Full-book run with prompt v4 to confirm the ~10% fallback estimate
+      (doc/Results-211-page-boo-converted.md §7, skipped so far, ~$0.70).
+- [ ] The 6 unsettled fallback pages (103, 112, 155, 104, 119, 153 — §8) and
+      the real errors still left (30: example twice + dropped grammar box; 73:
+      example letters turned into ticks; 122: repeated line).
+- [ ] Phase 0, the multi-language section above.
+
+Known risks (not fixed on purpose — decide if they matter)
+- [ ] Azure fails on a scanned book → the job sends the PDF itself → empty
+      index, but the teacher sees "ready". Could fail with a message instead
+      when the PDF has no text layer.
+- [ ] JPEG 2000 page images: no decoder (license of jai-imageio-jpeg2000), those
+      pages keep Azure text.
+- [ ] Jobs, limits and the cache index are in memory: a deploy loses running
+      improvements (the book stays on Azure text) and resets the daily counters.
+- [ ] A cache hit at upload isn't counted against the limits; if that cached
+      file then turns out to be gone, the full conversion runs uncounted.
+
+Cleanup
+- [ ] Stray untracked files in the backend repo: `#README.md#`, `TODO.md~`,
+      `nul`, `.clj-kondo/`.
+- [ ] Docs still point at the old prompt path dev/eval/book-page-prompt.txt
+      (now resources/book/page-prompt.txt) — fine as history, or update.
