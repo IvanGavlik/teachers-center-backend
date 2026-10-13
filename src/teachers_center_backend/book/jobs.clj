@@ -43,7 +43,8 @@
 (defn update-job!
   "Merges `m` into the job and stamps :updated-at."
   [id m]
-  (swap! jobs update id merge m {:updated-at (System/currentTimeMillis)}))
+  ;; only existing jobs: a record made here would have no :created-at and break drop-old-jobs!
+  (swap! jobs #(if (contains? % id) (update % id merge m {:updated-at (System/currentTimeMillis)}) %)))
 
 (defn- drop-old-jobs! []
   (let [cutoff (- (System/currentTimeMillis) keep-jobs-ms)]

@@ -22,6 +22,8 @@
         
         ;; PDF page images for book conversion (doc/book-ocr-investigation.md)
         org.apache.pdfbox/pdfbox {:mvn/version "3.0.3"}
+        ;; black-and-white scans are often JBIG2 images, which PDFBox can't decode without this
+        org.apache.pdfbox/jbig2-imageio {:mvn/version "3.0.4"}
 
         ;; Environment variables
         io.github.cdimascio/dotenv-java {:mvn/version "3.2.0"}

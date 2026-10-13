@@ -39,7 +39,9 @@
      (throw (ex-info "Azure Document Intelligence is not configured (AZURE_DI_ENDPOINT / AZURE_DI_KEY)" {})))
    (let [url (str (str/replace endpoint #"/+$" "")
                   "/documentintelligence/documentModels/prebuilt-layout:analyze"
-                  "?api-version=2024-11-30&outputContentFormat=markdown")
+                  ;; offsets in UTF-16 units, like Java strings: convert/split-pages cuts pages and
+                  ;; handwriting out of :content with them (Azure's default counts graphemes)
+                  "?api-version=2024-11-30&outputContentFormat=markdown&stringIndexType=utf16CodeUnit")
          t0  (System/currentTimeMillis)
          res (http/post url {:headers            {"Ocp-Apim-Subscription-Key" key
                                                   "Content-Type"              "application/pdf"}

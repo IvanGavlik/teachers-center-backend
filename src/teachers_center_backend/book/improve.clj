@@ -9,7 +9,9 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.tools.logging :as log])
-  (:import [java.io ByteArrayOutputStream File]
+  (:import [java.awt Color]
+           [java.awt.image BufferedImage]
+           [java.io ByteArrayOutputStream File]
            [java.util Base64]
            [java.util.concurrent Executors Semaphore ThreadFactory TimeUnit]
            [javax.imageio ImageIO]
@@ -26,7 +28,7 @@
 ;; ── ③ Page image ─────────────────────────────────────────────────────────────
 
 (defn- page-images [^PDDocument doc idx]
-  (let [res (.getResources (.getPage doc idx))]
+  (when-let [res (.getResources (.getPage doc idx))] ; a page can have no resources at all
     (for [n (.getXObjectNames res)
           :let [x (.getXObject res n)]
           :when (instance? PDImageXObject x)]
@@ -40,8 +42,16 @@
         bi  (if (and img (empty? more) (>= (.getWidth ^PDImageXObject img) 1000))
               (.getImage ^PDImageXObject img)
               (.renderImageWithDPI (PDFRenderer. doc) (int idx) 150 ImageType/RGB))
+        ;; the JPEG writer writes nothing (and returns false) for images with transparency, and
+        ;; some scans are 1-bit — draw every page onto a plain RGB image first
+        rgb (doto (BufferedImage. (.getWidth ^BufferedImage bi) (.getHeight ^BufferedImage bi) BufferedImage/TYPE_INT_RGB)
+              (-> .createGraphics (doto (.setColor Color/WHITE)
+                                        (.fillRect 0 0 (.getWidth ^BufferedImage bi) (.getHeight ^BufferedImage bi))
+                                        (.drawImage ^BufferedImage bi 0 0 nil)
+                                        (.dispose))))
         out (ByteArrayOutputStream.)]
-    (ImageIO/write bi "jpg" out)
+    (when-not (ImageIO/write rgb "jpg" out)
+      (throw (ex-info "No JPEG writer for the page image" {:page (inc idx)})))
     (str "data:image/jpeg;base64," (.encodeToString (Base64/getEncoder) (.toByteArray out)))))
 
 ;; ── ④ Vision model repair ────────────────────────────────────────────────────

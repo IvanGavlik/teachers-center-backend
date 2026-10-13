@@ -42,3 +42,18 @@
                                              (ex-info "rate limited" {:status 429})] (atom [])) page)]
     (is (= :error (:status r)))
     (is (= (:azure-text page) (:final-text r)))))
+
+(deftest page-images-are-plain-jpegs
+  (testing "a page with a transparent image (the JPEG writer would write nothing) and a page without images"
+    (with-open [doc (org.apache.pdfbox.pdmodel.PDDocument.)]
+      (let [argb (java.awt.image.BufferedImage. 1200 800 java.awt.image.BufferedImage/TYPE_INT_ARGB)
+            img  (org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory/createFromImage doc argb)
+            p1   (org.apache.pdfbox.pdmodel.PDPage.)]
+        (.addPage doc p1)
+        (with-open [cs (org.apache.pdfbox.pdmodel.PDPageContentStream. doc p1)]
+          (.drawImage cs img (float 0) (float 0)))
+        (.addPage doc (org.apache.pdfbox.pdmodel.PDPage.))
+        (doseq [i [0 1]]
+          (let [url (improve/page-image-url doc i)]
+            (is (str/starts-with? url "data:image/jpeg;base64,"))
+            (is (> (count url) 1000) "a real image, not an empty one")))))))

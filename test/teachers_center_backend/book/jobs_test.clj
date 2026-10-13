@@ -23,3 +23,7 @@
 (deftest an-unknown-job-is-nil
   (testing "e.g. after a restart"
     (is (nil? (jobs/get-job "no-such-id")))))
+
+(deftest updating-a-dropped-job-does-nothing
+  (jobs/update-job! "gone" {:status "ready"})
+  (is (nil? (jobs/get-job "gone"))))
