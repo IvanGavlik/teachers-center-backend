@@ -16,11 +16,13 @@
   (testing "a long title is cut, the fingerprint never"
     (is (re-find #"\[sha256-a{64}\]\.md$" (cache/cached-filename (apply str (repeat 200 "x")) sha)))))
 
-(deftest a-remembered-book-is-found-until-it-expires
+(deftest a-remembered-book-is-found-while-it-outlives-a-session
+  ;; the first lookup loads the index (here: no client, so it starts empty)
+  (cache/lookup nil "load")
   (let [now  (quot (System/currentTimeMillis) 1000)
         sha2 (apply str (repeat 64 "b"))]
-    (cache/remember! sha "file-1" (+ now 86400))
-    (cache/remember! sha2 "file-2" (+ now 60)) ; expires within the hour — too close to use
+    (cache/remember! sha "file-1" (+ now (* 20 86400)))
+    (cache/remember! sha2 "file-2" (+ now 86400)) ; one day left: a 3-day session would outlive it
     (is (= "file-1" (cache/lookup nil sha)))
     (is (nil? (cache/lookup nil sha2)))
     (testing "a file that turned out to be gone"

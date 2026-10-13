@@ -118,6 +118,11 @@
   [client vector-store-id file-id]
   (openai-client/make-request client (str "/vector_stores/" vector-store-id "/files") {:file_id file-id}))
 
+(defn retrieve-vector-store-file
+  "One file's indexing state in a store: :status is in_progress, completed, failed or cancelled."
+  [client vector-store-id file-id]
+  (openai-client/get-request client (str "/vector_stores/" vector-store-id "/files/" file-id) {}))
+
 (defn remove-file-from-vector-store
   "Takes a file out of the store's index. The file itself stays until delete-file or its expiry."
   [client vector-store-id file-id]

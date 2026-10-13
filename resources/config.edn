@@ -14,7 +14,11 @@
  {:improve? #boolean #or [#env BOOK_IMPROVE "true"]
   :model "gpt-6-luna"
   :effort "high"
-  :parallel 8}
+  :parallel 8
+  ;; Phase 4 guardrails (book.limits) — no accounts, so cap the cost per day. Cached books don't count.
+  ;; ~3,000 pages ≈ $40/day (Azure $30 + Luna $10); a school often shares one IP, hence 10.
+  :daily-pages #long #or [#env BOOK_DAILY_PAGES 3000]
+  :ip-daily-books #long #or [#env BOOK_IP_DAILY_BOOKS 10]}
 
  :teachers-center-backend/openai-client
  {:api-key #env OPENAI_API_KEY

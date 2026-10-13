@@ -20,6 +20,7 @@
             [teachers-center-backend.book.jobs :as jobs]
             [teachers-center-backend.book.improve :as improve]
             [teachers-center-backend.book.cache :as cache]
+            [teachers-center-backend.book.limits :as limits]
             [ring.util.response :refer [response]]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -54,8 +55,10 @@
       (log/warn "Cannot open uploaded PDF" {:error (ex-message e)})
       nil)))
 
-(defn- book-title [filename book-name]
-  (or (some-> book-name str/trim not-empty)
+(defn- book-title
+  "The add-in sends the file's name as book-name (\"Schritte 2.pdf\") — without .pdf it's a title."
+  [filename book-name]
+  (or (some-> book-name (str/replace #"(?i)\.pdf$" "") str/trim not-empty)
       (some-> filename (str/replace #"(?i)\.pdf$" "") str/trim not-empty)
       "Book"))
 
@@ -82,6 +85,24 @@
           (throw (ex-info "Indexing the book timed out" {:status (:status store)}))
 
           :else (do (Thread/sleep 2000) (recur)))))))
+
+(defn- wait-for-file
+  "Blocks until one file added to an existing store is searchable. The store's own status can still
+   read \"completed\" from before the file was added, so this asks about the file itself."
+  [openai-client vector-store-id file-id]
+  (let [deadline (+ (System/currentTimeMillis) index-timeout-ms)]
+    (loop []
+      (let [{:keys [status last_error]} (file-search/retrieve-vector-store-file openai-client vector-store-id file-id)]
+        (cond
+          (= "completed" status) nil
+          (#{"failed" "cancelled"} status) (throw (ex-info "OpenAI could not index the book" {:status status :error last_error}))
+          (> (System/currentTimeMillis) deadline) (throw (ex-info "Indexing the book timed out" {:status status}))
+          :else (do (Thread/sleep 2000) (recur)))))))
+
+(defn- try-quietly
+  "Runs cleanup that may fail without hiding the error that made it necessary."
+  [what f]
+  (try (f) (catch Exception e (log/warn e (str "Cleanup failed: " what)))))
 
 (defn- upload-book-file!
   "Uploads one file of the book to OpenAI (deleted by OpenAI after book-file-expires-after-seconds).
@@ -124,11 +145,19 @@
         (try
           (let [new-file-id (upload-book-file! openai-client {:file md :filename (cache/cached-filename (safe-filename title "") sha)
                                                               :mime-type "text/markdown"})]
-            (file-search/add-file-to-vector-store openai-client vector-store-id new-file-id)
-            (wait-for-index openai-client vector-store-id)
-            ;; only now: until the new file is searchable, the Azure text keeps the book usable
+            (try
+              (file-search/add-file-to-vector-store openai-client vector-store-id new-file-id)
+              (wait-for-file openai-client vector-store-id new-file-id)
+              (catch Exception e
+                ;; don't leave a half-added second copy: every passage would be found twice
+                (try-quietly "remove the new file from the store"
+                             #(file-search/remove-file-from-vector-store openai-client vector-store-id new-file-id))
+                (try-quietly "delete the new file" #(file-search/delete-file openai-client new-file-id))
+                (throw e)))
+            ;; only now: until the new file is searchable, the Azure text keeps the book usable.
+            ;; The swap is done once the Azure file is out of the store; deleting it is housekeeping.
             (file-search/remove-file-from-vector-store openai-client vector-store-id file-id)
-            (file-search/delete-file openai-client file-id)
+            (try-quietly "delete the Azure text file" #(file-search/delete-file openai-client file-id))
             ;; only finished books go into the cache, never Azure-only text
             (cache/remember! sha new-file-id (+ (quot (System/currentTimeMillis) 1000) book-file-expires-after-seconds))
             (jobs/update-job! job-id {:status "ready"})
@@ -199,6 +228,13 @@
   [job]
   (select-keys job [:id :status :book-name :pages-total :pages-done :vector-store-id :error]))
 
+(defn- client-ip
+  "The teacher's IP: Render's proxy puts it first in X-Forwarded-For."
+  [request]
+  (or (some-> (get-in request [:headers "x-forwarded-for"]) (str/split #",") first str/trim not-empty)
+      (:remote-addr request)
+      "unknown"))
+
 (defn upload-handler [request]
   (let [file-part (get-in request [:multipart-params "file"])
         book-name (get-in request [:multipart-params "book-name"])]
@@ -225,17 +261,27 @@
           (do (.delete pdf) {:status 400 :body {:error (str "Book too long (" max-pages " pages max)")}})
 
           :else
-          (let [sha    (cache/sha256 pdf)
-                job-id (jobs/start-job! {:status "queued" :book-name title :pages-total pages}
+          (let [sha     (cache/sha256 pdf)
+                cached? (some? (cache/lookup (:openapi-client request) sha))
+                ip      (client-ip request)
+                full    (when-not cached? (limits/try-reserve! ip pages (:book-config request)))]
+           (if full
+            (do (.delete pdf)
+                (log/warn "Book upload refused, daily limit reached" {:limit full :ip ip :pages pages :usage (limits/snapshot)})
+                {:status 429
+                 :body   {:error (case full
+                                   :daily-pages "Too many books are being read today — please try again tomorrow"
+                                   :ip-books    "You've reached today's limit for new books — please try again tomorrow")}})
+          (let [job-id (jobs/start-job! {:status "queued" :book-name title :pages-total pages}
                                         (partial run-book-job
                                                  {:openai-client (:openapi-client request)
                                                   :azure-config  (:azure-config request)
                                                   :book-config   (:book-config request)}
                                                  pdf title sha))]
             ;; :sha shows in the logs how often the exact same file comes back (worth caching?)
-            (log/info "Book upload started" {:job-id job-id :pages pages :sha (subs sha 0 12)
+            (log/info "Book upload started" {:job-id job-id :pages pages :sha (subs sha 0 12) :cached? cached?
                                              :mb (quot (:size file-part) (* 1024 1024))})
-            (response (job-view (jobs/get-job job-id)))))))))
+            (response (job-view (jobs/get-job job-id)))))))))))
 
 (defn status-handler [_request job-id]
   (if-let [job (jobs/get-job job-id)]

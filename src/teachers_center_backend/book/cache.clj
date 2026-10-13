@@ -35,32 +35,43 @@
 
 (defn- now-s [] (quot (System/currentTimeMillis) 1000))
 
+(def ^:private min-life-left-s
+  "A cached file must outlive the teacher's vector store (3 days after last use, library.clj) plus a
+   margin — otherwise the book would disappear from a session that's still using it."
+  (* 4 24 60 60))
+
+(defn- later-expiring [a b]
+  (if (> (or (:expires-at b) Long/MAX_VALUE) (or (:expires-at a) Long/MAX_VALUE)) b a))
+
 (defn- load-index! [openai-client]
   (try
     (let [entries (for [{:keys [id filename expires_at]} (file-search/list-files openai-client "assistants")
                         :let [[_ sha] (some->> filename (re-find marker))]
                         :when sha]
-                    [sha {:file-id id :expires-at expires_at}])]
-      (log/info "Book cache loaded" {:books (count entries)})
-      (into {} entries))
+                    [sha {:file-id id :expires-at expires_at}])
+          ;; the same book converted twice (two uploads at once, or after an expiry): keep the newer
+          index   (reduce (fn [m [sha e]] (update m sha #(if % (later-expiring % e) e))) {} entries)]
+      (log/info "Book cache loaded" {:books (count index)})
+      index)
     (catch Exception e
       ;; no cache is fine — every book is just converted again
       (log/warn e "Could not load the book cache, starting empty")
       {})))
 
 (defn lookup
-  "The cached file id for this fingerprint, if it exists and won't expire within the hour."
+  "The cached file id for this fingerprint, if it exists and has enough life left (min-life-left-s)."
   [openai-client sha]
   (when (nil? @index)
     (compare-and-set! index nil (load-index! openai-client)))
   (let [{:keys [file-id expires-at]} (get @index sha)]
-    (when (and file-id (or (nil? expires-at) (> expires-at (+ (now-s) 3600))))
+    (when (and file-id (or (nil? expires-at) (> expires-at (+ (now-s) min-life-left-s))))
       file-id)))
 
 (defn remember!
-  "Adds a converted book's file to the index."
+  "Adds a converted book's file to the index. Before the index is loaded this does nothing: the
+   load reads the file from OpenAI anyway, and starting a map here would stop the load."
   [sha file-id expires-at]
-  (swap! index (fnil assoc {}) sha {:file-id file-id :expires-at expires-at}))
+  (swap! index #(some-> % (assoc sha {:file-id file-id :expires-at expires-at}))))
 
 (defn forget!
   "Drops an entry whose file turned out to be gone (deleted early or expired)."

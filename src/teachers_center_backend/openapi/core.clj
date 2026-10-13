@@ -92,7 +92,8 @@
                                :multipart parts
                                :throw-exceptions false
                                :cookie-policy :standard
-                               :timeout 60000})]
+                               ;; a 60 MB book PDF (the fallback path) needs more than a minute on a slow link
+                               :timeout 300000})]
       (if (= 200 (:status response))
         (json/parse-string (:body response) true)
         (do

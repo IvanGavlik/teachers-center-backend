@@ -129,10 +129,16 @@
              (mapv (fn [{:keys [pdf-page azure-text] :as page}]
                      (.submit pool ^Callable
                               (fn []
-                                (let [r (if (str/blank? azure-text)
-                                          (assoc page :status :blank :final-text "" :usage {:in 0 :out 0})
-                                          (let [img (locking doc (page-image-url doc (dec pdf-page)))]
-                                            (dissoc (convert-page repair (assoc page :image-url img)) :image-url)))]
+                                (let [r (try
+                                          (if (str/blank? azure-text)
+                                            (assoc page :status :blank :final-text "" :usage {:in 0 :out 0})
+                                            (let [img (locking doc (page-image-url doc (dec pdf-page)))]
+                                              (dissoc (convert-page repair (assoc page :image-url img)) :image-url)))
+                                          ;; one page that can't be rendered (a damaged image) keeps
+                                          ;; its Azure text — it mustn't stop the rest of the book
+                                          (catch Exception e
+                                            (log/warn e "Page failed, keeping its Azure text" {:pdf-page pdf-page})
+                                            (assoc page :status :error :final-text azure-text :usage {:in 0 :out 0})))]
                                   (on-page)
                                   r)))))
              (mapv deref))
