@@ -13,14 +13,14 @@
            [java.awt.image BufferedImage]
            [java.io ByteArrayOutputStream File]
            [java.util Base64]
-           [java.util.concurrent Executors Semaphore ThreadFactory TimeUnit]
+           [java.util.concurrent Executors ExecutorService Semaphore ThreadFactory TimeUnit]
            [javax.imageio ImageIO]
            [org.apache.pdfbox Loader]
            [org.apache.pdfbox.pdmodel PDDocument]
            [org.apache.pdfbox.pdmodel.graphics.image PDImageXObject]
            [org.apache.pdfbox.rendering ImageType PDFRenderer]))
 
-(def ^:private max-model-calls
+(def ^:private ^Semaphore max-model-calls
   "Model calls at once across all books, so two uploads together don't run into OpenAI's rate
    limits. 8 at once for one book used ~1/4 of the account's limits on the 211-page run, so 24
    leaves some headroom. Also the ceiling for :parallel — a higher per-book value only adds threads."
@@ -139,7 +139,11 @@
 
 ;; ── The whole book ───────────────────────────────────────────────────────────
 
-(defn- daemon-pool [n]
+(defn- daemon-pool
+  "Typed so (.submit pool ^Callable …) is resolved at compile time. Untyped, the call is reflective,
+   and a Clojure fn is both a Runnable and a Callable: Java 17 (the Docker image) picked
+   submit(Runnable), so every page's result was nil and the improved book came out empty."
+  ^ExecutorService [n]
   (Executors/newFixedThreadPool n (reify ThreadFactory
                                     (newThread [_ r]
                                       (doto (Thread. ^Runnable r "book-page") (.setDaemon true))))))
@@ -175,7 +179,12 @@
                                             (assoc page :status :error :final-text azure-text :usage {:in 0 :out 0})))]
                                   (on-page)
                                   r)))))
-             (mapv deref))
+             (mapv deref)
+             ;; every page must come back as a page — a nil here would swap an empty book in
+             ;; for Azure's text (library/improve-book! fails instead and keeps the book usable)
+             (#(if (every? :status %)
+                 %
+                 (throw (ex-info "Improved pages are missing their results" {:pages (count %)})))))
         (finally
           (.shutdown pool)
           (.awaitTermination pool 1 TimeUnit/MINUTES))))))

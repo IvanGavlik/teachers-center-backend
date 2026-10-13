@@ -75,6 +75,25 @@
                                                         #(swap! sleeps conj %))))
       (is (empty? @sleeps)))))
 
+(deftest improve-pages-returns-every-page
+  ;; On Java 17 a reflective (.submit pool …) picked submit(Runnable) and every result was nil,
+  ;; so the improved book came out empty. Run the pool for real; the model is faked.
+  (let [pdf (java.io.File/createTempFile "improve-test-" ".pdf")]
+    (try
+      (with-open [doc (org.apache.pdfbox.pdmodel.PDDocument.)]
+        (.addPage doc (org.apache.pdfbox.pdmodel.PDPage.))
+        (.addPage doc (org.apache.pdfbox.pdmodel.PDPage.))
+        (.save doc pdf))
+      (with-redefs [improve/repair-page (fn [_client _opts azure-text _image _feedback]
+                                          {:text azure-text :usage {:in 1 :out 1} :ms 1})]
+        (let [r (improve/improve-pages nil pdf [{:pdf-page 1 :azure-text "Er ist müde."}
+                                               {:pdf-page 2 :azure-text ""}]
+                                       {:parallel 2})]
+          (is (= [1 2] (map :pdf-page r)))
+          (is (= [:ok :blank] (map :status r)))
+          (is (= ["Er ist müde." ""] (map :final-text r)))))
+      (finally (.delete pdf)))))
+
 (deftest page-images-are-plain-jpegs
   (testing "a page with a transparent image (the JPEG writer would write nothing) and a page without images"
     (with-open [doc (org.apache.pdfbox.pdmodel.PDDocument.)]
