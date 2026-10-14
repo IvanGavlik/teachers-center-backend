@@ -58,6 +58,33 @@
         {:pdf-page (inc i) :azure-text ""}))
     pages))
 
+;; ── A book OCR'd in parts (book.ocr) ────────────────────────────────────────
+
+(defn part-ranges
+  "The book's pages in parts of `size`: (part-ranges 45 20) → ([1 20] [21 40] [41 45]), 1-based and
+   inclusive, like PDFBox's Splitter cuts them."
+  [page-count size]
+  (for [start (range 1 (inc page-count) size)]
+    [start (min page-count (+ start size -1))]))
+
+(defn join-parts
+  "One page list for the whole book from its parts, in order: [{:range [first last] :result
+   analyzeResult}]. Each part is split on its own (Azure's offsets only mean something inside its
+   own part), then renumbered as pages of the whole book. A part without :result (Azure failed)
+   becomes empty pages marked :ocr-failed? — like blank pages, the rest of the pipeline skips them."
+  [parts]
+  (vec (mapcat (fn [{[first-page last-page] :range :keys [result]}]
+                 (if result
+                   (map #(update % :pdf-page + (dec first-page)) (split-pages result))
+                   (for [p (range first-page (inc last-page))]
+                     {:pdf-page p :azure-text "" :ocr-failed? true})))
+               parts)))
+
+(defn missing-share
+  "Share of pages whose part couldn't be read, 0 to 1."
+  [pages]
+  (if (empty? pages) 0 (/ (count (filter :ocr-failed? pages)) (count pages))))
+
 (defn page-marker
   "<!-- Schritte 2 · Lektion 8 · S. 92 · PDF p. 14 --> — so file_search passages say where they come from."
   [title {:keys [pdf-page printed-page lesson]}]

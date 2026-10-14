@@ -33,3 +33,22 @@
     (is (str/includes? md "<!-- Schritte 2 · Lektion 8 · S. 92 · PDF p. 1 -->"))
     (is (str/includes? md "<!-- Schritte 2 · PDF p. 2 -->"))
     (is (str/includes? md "<!-- Schritte 2 · Lektion 8 · S. 93 · PDF p. 3 -->\n\nb Ordnen Sie zu."))))
+
+(deftest a-book-is-cut-into-parts
+  (is (= [[1 20] [21 40] [41 45]] (convert/part-ranges 45 20)))
+  (is (= [[1 20]] (convert/part-ranges 20 20)))
+  (is (= [[1 3]] (convert/part-ranges 3 20))))
+
+(deftest parts-join-into-one-book
+  (let [pages (convert/join-parts [{:range [1 3] :result analyze-result}
+                                   {:range [4 5] :result nil}
+                                   {:range [6 8] :result analyze-result}])]
+    (testing "each part keeps its own text, numbered as pages of the whole book"
+      (is (= (range 1 9) (map :pdf-page pages)))
+      (is (str/includes? (:azure-text (nth pages 5)) "Ich bin (Beispiel: Lehrerin)."))
+      (is (= 92 (:printed-page (nth pages 5)))))
+    (testing "a part Azure couldn't read becomes empty pages, marked"
+      (is (= [{:pdf-page 4 :azure-text "" :ocr-failed? true}
+              {:pdf-page 5 :azure-text "" :ocr-failed? true}]
+             (subvec pages 3 5))))
+    (is (= 1/4 (convert/missing-share pages)))))

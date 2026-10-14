@@ -27,3 +27,16 @@
 (deftest updating-a-dropped-job-does-nothing
   (jobs/update-job! "gone" {:status "ready"})
   (is (nil? (jobs/get-job "gone"))))
+
+(deftest a-second-upload-finds-the-job-for-its-pdf
+  (let [slow #(Thread/sleep 300)
+        id   (jobs/start-job! {:status "queued" :sha "sha-live"} (fn [_] (slow)))]
+    (is (= id (:id (jobs/live-job-for "sha-live"))))
+    (is (nil? (jobs/live-job-for "sha-other")))
+    (testing "not a failed job — a new upload should try again"
+      (let [failed (jobs/start-job! {:status "queued" :sha "sha-failed"} (fn [_] (throw (ex-info "x" {}))))]
+        (wait-for failed #(= "failed" (:status %)))
+        (is (nil? (jobs/live-job-for "sha-failed")))))
+    (testing "not a book with pages Azure couldn't read — a new upload should read them again"
+      (jobs/update-job! id {:ocr-missing 20})
+      (is (nil? (jobs/live-job-for "sha-live"))))))

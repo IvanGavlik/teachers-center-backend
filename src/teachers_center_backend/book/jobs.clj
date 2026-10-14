@@ -26,9 +26,10 @@
    runs several pages at once itself (see book.improve)."
   2)
 
-(defn- daemon-pool
-  ;; Daemon threads: a running book job must not keep the JVM alive on shutdown (or after tests)
-  [n thread-name]
+(defn daemon-pool
+  ;; Daemon threads: a running book job must not keep the JVM alive on shutdown (or after tests).
+  ;; Typed, so (.submit pool ^Callable …) isn't reflective (see book.improve/daemon-pool).
+  ^ExecutorService [n thread-name]
   (Executors/newFixedThreadPool n (reify ThreadFactory
                                     (newThread [_ r]
                                       (doto (Thread. ^Runnable r ^String thread-name) (.setDaemon true))))))
@@ -45,6 +46,16 @@
   [id m]
   ;; only existing jobs: a record made here would have no :created-at and break drop-old-jobs!
   (swap! jobs #(if (contains? % id) (update % id merge m {:updated-at (System/currentTimeMillis)}) %)))
+
+(defn live-job-for
+  "The newest job for this PDF (its SHA-256 in :sha) that a second upload of the same file can join
+   instead of paying for OCR again: not failed, and not missing pages — a retry of such a book
+   should read its missing parts again (book.ocr), not get the same holes."
+  [sha]
+  (->> (vals @jobs)
+       (filter #(and (= sha (:sha %)) (not= "failed" (:status %)) (not (pos? (:ocr-missing % 0)))))
+       (sort-by :created-at >)
+       first))
 
 (defn- drop-old-jobs! []
   (let [cutoff (- (System/currentTimeMillis) keep-jobs-ms)]

@@ -16,4 +16,6 @@ RUN clojure -P
 EXPOSE $PORT
 
 # Run the application
-CMD ["clojure", "-M", "-m", "teachers-center-backend.core"]
+# Render's 512 MB plan: the JVM's default heap is 25% of the container (128 MB), too little for a
+# whole book in memory. 75% leaves ~130 MB for the JVM itself and PDFBox's native buffers.
+CMD ["clojure", "-J-XX:MaxRAMPercentage=75", "-M", "-m", "teachers-center-backend.core"]
